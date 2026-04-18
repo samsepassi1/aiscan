@@ -1,0 +1,92 @@
+{
+  "name": "aiscan",
+  "displayName": "aiscan — AI Code Security",
+  "description": "Real-time security scanning for AI-generated code. Detects hardcoded secrets, weak crypto, unsafe deserialization, and more.",
+  "version": "0.1.0",
+  "publisher": "walmart-global-tech",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Linters", "Other"],
+  "keywords": ["security", "ai", "scanner", "appsec", "sast"],
+  "activationEvents": [
+    "onLanguage:python",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:go",
+    "onLanguage:java"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiscan.scanFile",
+        "title": "aiscan: Scan Current File"
+      },
+      {
+        "command": "aiscan.scanWorkspace",
+        "title": "aiscan: Scan Workspace"
+      },
+      {
+        "command": "aiscan.clearDiagnostics",
+        "title": "aiscan: Clear Diagnostics"
+      }
+    ],
+    "configuration": {
+      "title": "aiscan",
+      "properties": {
+        "aiscan.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable aiscan on file save."
+        },
+        "aiscan.llmEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable LLM analysis tier (requires API key)."
+        },
+        "aiscan.severity": {
+          "type": "string",
+          "default": "LOW",
+          "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"],
+          "description": "Minimum severity of findings to display."
+        },
+        "aiscan.llmProvider": {
+          "type": "string",
+          "default": "anthropic",
+          "enum": ["anthropic", "openai", "local"],
+          "description": "LLM provider for analysis tier."
+        },
+        "aiscan.llmModel": {
+          "type": "string",
+          "default": "claude-sonnet-4-5",
+          "description": "LLM model name."
+        },
+        "aiscan.llmBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Custom LLM base URL (for Ollama enterprise endpoints)."
+        },
+        "aiscan.executablePath": {
+          "type": "string",
+          "default": "aiscan",
+          "description": "Path to the aiscan executable."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,1 @@
+"""Language-agnostic detection rules."""

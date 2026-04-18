@@ -1,0 +1,66 @@
+name: "aiscan"
+description: "AI-native security scanner for AI-generated code — catches the vulnerabilities AI coding assistants introduce"
+author: "Sam Sepassi <sam.sepassi@walmart.com>"
+
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  target:
+    description: "Path to scan (relative to repo root)"
+    required: false
+    default: "."
+  severity:
+    description: "Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW, INFO)"
+    required: false
+    default: "HIGH"
+  llm:
+    description: "Enable LLM analysis tier (true/false)"
+    required: false
+    default: "false"
+  llm-provider:
+    description: "LLM provider (anthropic, openai, local)"
+    required: false
+    default: "anthropic"
+  llm-model:
+    description: "LLM model name"
+    required: false
+    default: "claude-sonnet-4-6"
+  sarif-output:
+    description: "Path to write SARIF output file"
+    required: false
+    default: "aiscan-results.sarif"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install aiscan
+      run: pip install aiscan
+      shell: bash
+
+    - name: Run aiscan
+      run: |
+        aiscan scan "${{ inputs.target }}" \
+          --severity "${{ inputs.severity }}" \
+          --format sarif \
+          --output "${{ inputs.sarif-output }}" \
+          --exit-code \
+          ${{ inputs.llm == 'true' && '--llm' || '' }} \
+          ${{ inputs.llm == 'true' && format('--llm-provider {0}', inputs.llm-provider) || '' }} \
+          ${{ inputs.llm == 'true' && format('--llm-model {0}', inputs.llm-model) || '' }}
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ env.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ env.OPENAI_API_KEY }}
+
+    - name: Upload SARIF to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-output }}
+      if: always()

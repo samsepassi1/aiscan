@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aiscan"
+version = "0.1.0"
+description = "AI-native security scanner for AI-generated code"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Sam Sepassi", email = "sam.sepassi@walmart.com" },
+]
+keywords = ["security", "scanner", "ai", "llm", "appsec", "sast"]
+classifiers = [
+    "Topic :: Security",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "tree-sitter>=0.23",
+    "tree-sitter-language-pack>=0.7",
+    "pyyaml>=6.0",
+    "click>=8.1",
+    "rich>=13.0",
+    "pydantic>=2.0",
+    "gitpython>=3.1",
+    "diskcache>=5.6",
+]
+
+[project.optional-dependencies]
+llm = [
+    "openai>=1.0",
+    "anthropic>=0.28",
+]
+dev = ["pytest>=8.0", "pytest-cov", "mypy", "ruff"]
+
+[project.scripts]
+aiscan = "aiscan.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aiscan"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+norecursedirs = ["tests/fixtures"]
