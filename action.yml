@@ -41,7 +41,7 @@ runs:
         python-version: "3.11"
 
     - name: Install aiscan
-      run: pip install aiscan
+      run: pip install -e "${{ github.action_path }}"
       shell: bash
 
     - name: Run aiscan
