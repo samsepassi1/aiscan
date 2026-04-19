@@ -11,7 +11,9 @@ from tree_sitter_language_pack import get_parser
 LANGUAGE_MAP: dict[str, str] = {
     ".py": "python",
     ".js": "javascript",
+    ".jsx": "javascript",
     ".ts": "typescript",
+    ".tsx": "typescript",
     ".go": "go",
     ".java": "java",
 }

@@ -71,6 +71,28 @@ API_KEY = os.environ["API_KEY"]  # aiscan: suppress not a real secret
 | AI-SEC-009 | Dynamic Code Execution | CRITICAL | CWE-78, CWE-94 |
 | AI-SEC-011 | Path Traversal | HIGH | CWE-22 |
 | AI-SEC-012 | Permissive CORS | HIGH | CWE-942 |
+| AI-SEC-013 | SSR State Hydration Injection | CRITICAL | CWE-79, CWE-116 |
+| AI-SEC-014 | Dangerous Inner HTML | HIGH | CWE-79, CWE-80 |
+| AI-SEC-015 | SSRF in Server-Side Fetch | HIGH | CWE-918 |
+| AI-SEC-016 | Insecure Cookie Flags | HIGH | CWE-614, CWE-1004, CWE-1275 |
+| AI-SEC-017 | Weak Content Security Policy | MEDIUM | CWE-693, CWE-1021 |
+
+### SSR / Electrode Coverage
+
+Rules **AI-SEC-013 through AI-SEC-017** target vulnerability patterns common
+in Server-Side-Rendering codebases (Electrode, Next.js, custom Node/React SSR)
+that AI coding assistants routinely introduce:
+
+- **AI-SEC-013** catches the single most dangerous SSR-specific XSS: using
+  `JSON.stringify` to inline state into a `<script>` tag. Fix: `serialize-javascript`.
+- **AI-SEC-014** catches `dangerouslySetInnerHTML` without a sanitizer like DOMPurify.
+- **AI-SEC-015** catches SSRF via `fetch`/`axios`/`got` calls whose URL is built
+  from `req.query`/`req.params`/`req.body`.
+- **AI-SEC-016** catches Express/Fastify/Hapi cookie calls missing `httpOnly`,
+  `secure`, or `sameSite`, and explicit `httpOnly: false`.
+- **AI-SEC-017** catches `'unsafe-inline'`/`'unsafe-eval'` in Content Security Policy.
+
+All five rules run on `.js`, `.jsx`, `.ts`, and `.tsx` files.
 
 List all rules:
 

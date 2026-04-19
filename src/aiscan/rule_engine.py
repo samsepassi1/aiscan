@@ -37,6 +37,11 @@ class RuleEngine:
         from aiscan.rules.python.AI_SEC_009_eval_exec import EvalExecRule
         from aiscan.rules.javascript.AI_SEC_009_eval_exec_js import JSEvalExecRule
         from aiscan.rules.javascript.AI_SEC_012_permissive_cors_js import PermissiveCORSRule
+        from aiscan.rules.javascript.AI_SEC_013_ssr_state_injection import SSRStateInjectionRule
+        from aiscan.rules.javascript.AI_SEC_014_dangerous_inner_html import DangerousInnerHTMLRule
+        from aiscan.rules.javascript.AI_SEC_015_ssrf_ssr_fetch import SSRFInServerFetchRule
+        from aiscan.rules.javascript.AI_SEC_016_insecure_cookie import InsecureCookieRule
+        from aiscan.rules.javascript.AI_SEC_017_weak_csp import WeakCSPRule
         from aiscan.rules.common.AI_SEC_011_path_traversal import PathTraversalRule
 
         self.rules = [
@@ -47,6 +52,11 @@ class RuleEngine:
             EvalExecRule(),
             JSEvalExecRule(),
             PermissiveCORSRule(),
+            SSRStateInjectionRule(),
+            DangerousInnerHTMLRule(),
+            SSRFInServerFetchRule(),
+            InsecureCookieRule(),
+            WeakCSPRule(),
             PathTraversalRule(),
         ]
 
