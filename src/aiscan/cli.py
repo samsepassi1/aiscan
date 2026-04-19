@@ -80,6 +80,12 @@ def main() -> None:
     default=False,
     help="Only scan files changed in the current git diff (useful in pre-commit hooks).",
 )
+@click.option(
+    "--exclude",
+    multiple=True,
+    metavar="PATH",
+    help="Exclude a path (relative to TARGET) from scanning. Can be repeated.",
+)
 def scan(
     target: Path,
     llm: bool,
@@ -92,6 +98,7 @@ def scan(
     output: Path | None,
     exit_code: bool,
     diff_only: bool,
+    exclude: tuple[str, ...],
 ) -> None:
     """Scan TARGET path for AI-generated code vulnerabilities.
 
@@ -114,6 +121,7 @@ def scan(
         llm_api_key=llm_api_key,
         llm_base_url=llm_base_url,
         diff_only=diff_only,
+        exclude=exclude,
     )
 
     if output_format == "terminal":

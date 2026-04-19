@@ -31,6 +31,10 @@ inputs:
     description: "Path to write SARIF output file"
     required: false
     default: "aiscan-results.sarif"
+  exclude:
+    description: "Comma-separated paths (relative to target) to exclude from scanning"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -46,11 +50,19 @@ runs:
 
     - name: Run aiscan
       run: |
+        EXCLUDE_ARGS=""
+        if [ -n "${{ inputs.exclude }}" ]; then
+          IFS=',' read -ra PATHS <<< "${{ inputs.exclude }}"
+          for p in "${PATHS[@]}"; do
+            EXCLUDE_ARGS="$EXCLUDE_ARGS --exclude $(echo $p | xargs)"
+          done
+        fi
         aiscan scan "${{ inputs.target }}" \
           --severity "${{ inputs.severity }}" \
           --format sarif \
           --output "${{ inputs.sarif-output }}" \
           --exit-code \
+          $EXCLUDE_ARGS \
           ${{ inputs.llm == 'true' && '--llm' || '' }} \
           ${{ inputs.llm == 'true' && format('--llm-provider {0}', inputs.llm-provider) || '' }} \
           ${{ inputs.llm == 'true' && format('--llm-model {0}', inputs.llm-model) || '' }}

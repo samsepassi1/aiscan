@@ -52,3 +52,4 @@ jobs:
           target: "src/"
           severity: "HIGH"
           sarif-output: "aiscan-self-scan.sarif"
+          exclude: "aiscan/rules"

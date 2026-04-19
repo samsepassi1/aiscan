@@ -30,12 +30,14 @@ class Scanner:
         llm_api_key: str | None = None,
         llm_base_url: str | None = None,
         diff_only: bool = False,
+        exclude: tuple[str, ...] = (),
         cache_dir: str = ".aiscan_cache",
     ) -> None:
         self.llm_enabled = llm_enabled
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.diff_only = diff_only
+        self.exclude = exclude
 
         self._ast_layer = ASTLayer()
         self._rule_engine = RuleEngine()
@@ -90,6 +92,21 @@ class Scanner:
             files = self._get_diff_files(target)
         else:
             files = self._ast_layer.collect_files(target)
+
+        # Apply exclude prefixes
+        if self.exclude:
+            target_abs = target.resolve()
+            def _is_excluded(p: Path) -> bool:
+                p_abs = p.resolve()
+                for ex in self.exclude:
+                    ex_abs = (target_abs / ex).resolve()
+                    try:
+                        p_abs.relative_to(ex_abs)
+                        return True
+                    except ValueError:
+                        pass
+                return False
+            files = [f for f in files if not _is_excluded(f)]
 
         # Parse all files
         parsed_files: list[ParsedFile] = []
