@@ -68,39 +68,41 @@ class SSRStateInjectionRule:
         uses_safe_serializer = any(m.search(source_text) for m in SAFE_SERIALIZER_MARKERS)
 
         for i, line in enumerate(parsed.lines, start=1):
+            matched = False
             for pattern in SSR_INJECTION_PATTERNS:
                 if pattern.search(line):
-                    # If serialize-javascript is imported, the pattern may be
-                    # residual unsafe code — still report, but at lower confidence.
-                    confidence = 0.75 if uses_safe_serializer else 0.92
-                    findings.append(Finding(
-                        rule_id=self.rule_id,
-                        rule_name=self.rule_name,
-                        severity=self.severity,
-                        file_path=str(parsed.path),
-                        line_start=i,
-                        line_end=i,
-                        message=(
-                            "SSR state is serialized with JSON.stringify and embedded "
-                            "inline in a <script> tag. JSON.stringify does not escape "
-                            "'</script>' inside string values, so attacker-controlled "
-                            "state can break out of the script tag and execute arbitrary "
-                            "JavaScript in the victim's browser (stored XSS with session "
-                            "access)."
-                        ),
-                        cwe_ids=self.cwe_ids,
-                        detection_method=self.detection_method,
-                        confidence=confidence,
-                        remediation=(
-                            "Replace JSON.stringify with the 'serialize-javascript' "
-                            "package, which escapes '<', '>', '/', and U+2028/U+2029. "
-                            "Example:\n"
-                            "  const serialize = require('serialize-javascript');\n"
-                            "  html += `<script>window.__INITIAL_STATE__ = "
-                            "${serialize(state, { isJSON: true })};</script>`;\n"
-                            "Also verify any CSP nonce is applied to this inline script."
-                        ),
-                        code_snippet=line.rstrip(),
-                    ))
+                    matched = True
                     break
+            if not matched:
+                continue
+            confidence = 0.75 if uses_safe_serializer else 0.92
+            findings.append(Finding(
+                rule_id=self.rule_id,
+                rule_name=self.rule_name,
+                severity=self.severity,
+                file_path=str(parsed.path),
+                line_start=i,
+                line_end=i,
+                message=(
+                    "SSR state is serialized with JSON.stringify and embedded "
+                    "inline in a <script> tag. JSON.stringify does not escape "
+                    "'</script>' inside string values, so attacker-controlled "
+                    "state can break out of the script tag and execute arbitrary "
+                    "JavaScript in the victim's browser (stored XSS with session "
+                    "access)."
+                ),
+                cwe_ids=self.cwe_ids,
+                detection_method=self.detection_method,
+                confidence=confidence,
+                remediation=(
+                    "Replace JSON.stringify with the 'serialize-javascript' "
+                    "package, which escapes '<', '>', '/', and U+2028/U+2029. "
+                    "Example:\n"
+                    "  const serialize = require('serialize-javascript');\n"
+                    "  html += `<script>window.__INITIAL_STATE__ = "
+                    "${serialize(state, { isJSON: true })};</script>`;\n"
+                    "Also verify any CSP nonce is applied to this inline script."
+                ),
+                code_snippet=line.rstrip(),
+            ))
         return findings

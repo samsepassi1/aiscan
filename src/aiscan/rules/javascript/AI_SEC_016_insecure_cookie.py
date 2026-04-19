@@ -61,8 +61,10 @@ class InsecureCookieRule:
                 continue
 
             # Case 1: explicit bad flags anywhere in code — report every occurrence
+            explicit_fired = False
             for pattern, label in EXPLICIT_BAD_FLAGS:
                 if pattern.search(line):
+                    explicit_fired = True
                     findings.append(Finding(
                         rule_id=self.rule_id,
                         rule_name=self.rule_name,
@@ -92,8 +94,9 @@ class InsecureCookieRule:
                         code_snippet=line.rstrip(),
                     ))
 
-            # Case 2: cookie call whose (multi-line) options object is missing httpOnly
-            if COOKIE_CALL_PATTERN.search(line):
+            # Case 2: cookie call whose (multi-line) options object is missing httpOnly.
+            # Skip if Case 1 already fired — the explicit-flag finding is more precise.
+            if not explicit_fired and COOKIE_CALL_PATTERN.search(line):
                 window = _line_plus_window(parsed, i, span=4)
                 has_http_only = "httpOnly" in window and not re.search(
                     r"httpOnly\s*:\s*false", window

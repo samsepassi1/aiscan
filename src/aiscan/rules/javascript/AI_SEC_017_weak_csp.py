@@ -101,8 +101,16 @@ class WeakCSPRule:
     def check(self, parsed: ParsedFile) -> list[Finding]:
         findings: list[Finding] = []
         for i, line in enumerate(parsed.lines, start=1):
+            seen_labels: set[str] = set()
             for pattern, label in CSP_UNSAFE_PATTERNS:
+                # Normalise label for dedup: strip parenthetical qualifiers so
+                # "'unsafe-inline'" and "'unsafe-inline' (in CSP directive)"
+                # are treated as the same issue on the same line.
+                base_label = label.split(" (")[0]
+                if base_label in seen_labels:
+                    continue
                 if pattern.search(line):
+                    seen_labels.add(base_label)
                     findings.append(Finding(
                         rule_id=self.rule_id,
                         rule_name=self.rule_name,
@@ -136,5 +144,4 @@ class WeakCSPRule:
                         ),
                         code_snippet=line.rstrip(),
                     ))
-                    break
         return findings
