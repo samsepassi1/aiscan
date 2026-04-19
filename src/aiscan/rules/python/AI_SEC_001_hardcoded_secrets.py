@@ -98,19 +98,19 @@ class HardcodedSecretsRule(BaseRule):
             lang = get_language(parsed.language)  # type: ignore[arg-type]
             query = lang.query(self._QUERY_SRC)  # type: ignore[attr-defined]
             captures = query.captures(parsed.tree.root_node)  # type: ignore[attr-defined]
+
+            # captures is a dict {capture_name: [nodes]} or list of (node, name) tuples
+            # Normalize to list of (node, capture_name)
+            if isinstance(captures, dict):
+                pairs: list[tuple] = []
+                for cap_name, nodes in captures.items():
+                    for node in nodes:
+                        pairs.append((node, cap_name))
+            else:
+                pairs = list(captures)
         except Exception:
             # Fallback: manual traversal if query API unavailable
             return self._manual_check(parsed)
-
-        # captures is a dict {capture_name: [nodes]} or list of (node, name) tuples
-        # Normalize to list of (node, capture_name)
-        if isinstance(captures, dict):
-            pairs: list[tuple] = []
-            for cap_name, nodes in captures.items():
-                for node in nodes:
-                    pairs.append((node, cap_name))
-        else:
-            pairs = list(captures)
 
         # Group by row, collecting all name nodes and value nodes per row
         by_row: dict[int, dict[str, list[object]]] = {}
@@ -164,7 +164,7 @@ class HardcodedSecretsRule(BaseRule):
         """Line-based fallback when the tree-sitter query API is unavailable."""
         findings: list[Finding] = []
         assign_re = re.compile(
-            r"^\s*(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?P<quote>[\"'])(?P<value>.*?)(?P=quote)\s*$"
+            r"^\s*(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?P<quote>[\"'])(?P<value>.*?)(?P=quote)\s*(?:#.*)?$"
         )
         for i, line in enumerate(parsed.lines, start=1):
             m = assign_re.match(line)
