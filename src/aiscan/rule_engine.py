@@ -17,6 +17,8 @@ class RuleEngine:
         self._load_builtin_rules()
 
     def _load_builtin_rules(self) -> None:
+        from aiscan.rules.python.AI_SEC_002_missing_authorization import MissingAuthorizationRule
+        from aiscan.rules.javascript.AI_SEC_002_missing_authorization_js import MissingAuthorizationJSRule
         from aiscan.rules.python.AI_SEC_001_hardcoded_secrets import HardcodedSecretsRule
         from aiscan.rules.python.AI_SEC_003_weak_crypto import WeakCryptoRule
         from aiscan.rules.python.AI_SEC_004_insecure_random import InsecureRandomRule
@@ -32,6 +34,8 @@ class RuleEngine:
         from aiscan.rules.common.AI_SEC_011_path_traversal import PathTraversalRule
 
         self.rules = [
+            MissingAuthorizationRule(),
+            MissingAuthorizationJSRule(),
             HardcodedSecretsRule(),
             WeakCryptoRule(),
             InsecureRandomRule(),

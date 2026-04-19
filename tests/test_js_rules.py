@@ -161,3 +161,94 @@ class TestJSRules:
         findings = self._scan(rule_engine, ast_layer, f)
         csp_findings = [fi for fi in findings if fi.rule_id == "AI-SEC-017"]
         assert len(csp_findings) == 0
+
+    # ── AI-SEC-002: Missing Authorization (JavaScript) ────────────────────────
+
+    def test_detects_missing_auth_express_admin(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, vulnerable_dir / "authorization_test.js")
+        sec002 = [f for f in findings if f.rule_id == "AI-SEC-002"]
+        assert len(sec002) >= 3, f"Expected >=3 AI-SEC-002 findings, got {len(sec002)}: {sec002}"
+
+    def test_missing_auth_js_admin_is_critical(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, vulnerable_dir / "authorization_test.js")
+        sec002 = [f for f in findings if f.rule_id == "AI-SEC-002"]
+        admin_findings = [f for f in sec002 if "/admin" in f.code_snippet]
+        assert len(admin_findings) >= 1
+        assert all(f.severity == Severity.CRITICAL for f in admin_findings)
+
+    def test_no_false_positive_auth_safe_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, safe_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, safe_dir / "authorization_safe.js")
+        sec002 = [f for f in findings if f.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 0, f"False positives in authorization_safe.js: {sec002}"
+
+    def test_inline_middleware_arg_not_flagged_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        f = tmp_path / "mw_safe.js"
+        f.write_text(
+            "app.delete('/api/user/:id', requireAuth, async (req, res) => {\n"
+            "  await User.findByIdAndDelete(req.params.id);\n"
+            "  res.json({ deleted: req.params.id });\n"
+            "});\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 0, f"Middleware-guarded route falsely flagged: {sec002}"
+
+    def test_manual_req_user_check_not_flagged_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        f = tmp_path / "manual_check.js"
+        f.write_text(
+            "app.delete('/api/posts/:id', async (req, res) => {\n"
+            "  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });\n"
+            "  res.json({ ok: true });\n"
+            "});\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 0, f"Manual-check route falsely flagged: {sec002}"
+
+    def test_public_get_not_flagged_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        f = tmp_path / "public.js"
+        f.write_text(
+            "app.get('/api/public/articles', (req, res) => {\n"
+            "  res.json([]);\n"
+            "});\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 0, f"Public route falsely flagged: {sec002}"
+
+    def test_delete_route_without_auth_is_critical_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        f = tmp_path / "vuln_delete.js"
+        f.write_text(
+            "router.delete('/api/user/:id', async (req, res) => {\n"
+            "  await User.findByIdAndDelete(req.params.id);\n"
+            "  res.json({ deleted: req.params.id });\n"
+            "});\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 1
+        assert sec002[0].severity == Severity.CRITICAL
+
+    def test_missing_auth_js_cwe_ids(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, vulnerable_dir / "authorization_test.js")
+        sec002 = [f for f in findings if f.rule_id == "AI-SEC-002"]
+        assert len(sec002) > 0
+        for f in sec002:
+            assert "CWE-862" in f.cwe_ids
+            assert "CWE-306" in f.cwe_ids
