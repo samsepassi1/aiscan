@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from pathlib import Path
 from typing import Any
 
 from aiscan.ast_layer import ParsedFile

@@ -6,7 +6,6 @@ import json
 from datetime import datetime, timezone
 from io import StringIO
 
-import pytest
 
 from aiscan.models import DetectionMethod, Finding, ScanResult, Severity
 from aiscan.reporter import generate_sarif, write_json, write_sarif, write_terminal

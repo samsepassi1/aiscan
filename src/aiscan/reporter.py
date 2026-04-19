@@ -12,7 +12,7 @@ from rich.table import Table
 from rich import box
 from rich.text import Text
 
-from aiscan.models import Finding, ScanResult, Severity, SEVERITY_ORDER
+from aiscan.models import Finding, ScanResult, Severity
 
 
 # SARIF severity mapping
@@ -153,7 +153,7 @@ def write_terminal(result: ScanResult, console: Console | None = None) -> None:
     suppressed = [f for f in result.findings if f.suppressed]
 
     con.print()
-    con.rule(f"[bold]aiscan[/bold] — scan complete")
+    con.rule("[bold]aiscan[/bold] — scan complete")
     con.print(
         f"  Target: [bold]{result.target_path}[/bold]  |  "
         f"Files: {result.total_files_scanned}  |  "

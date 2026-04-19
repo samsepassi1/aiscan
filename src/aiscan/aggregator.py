@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from aiscan.ast_layer import ParsedFile
-from aiscan.models import DetectionMethod, Finding, Severity, SEVERITY_ORDER
+from aiscan.models import DetectionMethod, Finding, SEVERITY_ORDER
 
 
 SUPPRESS_COMMENT = re.compile(r"#\s*aiscan:\s*suppress(?:\s+(.*))?", re.IGNORECASE)

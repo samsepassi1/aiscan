@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 
-from aiscan.ast_layer import ASTLayer, ParsedFile, LANGUAGE_MAP
+from aiscan.ast_layer import ASTLayer, LANGUAGE_MAP
 
 
 class TestASTLayer:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 
 from aiscan.scanner import Scanner
 from aiscan.models import ScanResult

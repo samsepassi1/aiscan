@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 
 from aiscan.ast_layer import ASTLayer
 from aiscan.rule_engine import RuleEngine
