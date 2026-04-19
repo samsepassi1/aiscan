@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -21,7 +22,7 @@ STRING_LITERAL_ONLY = re.compile(r"""^\s*(eval|exec)\s*\(\s*["'][^"']*["']\s*\)\
 IMPORT_VAR_PATTERN = re.compile(r"\b__import__\s*\((?!\s*[\"'])")
 
 
-class EvalExecRule:
+class EvalExecRule(BaseRule):
     rule_id = "AI-SEC-009"
     rule_name = "Dynamic Code Execution"
     severity = Severity.CRITICAL

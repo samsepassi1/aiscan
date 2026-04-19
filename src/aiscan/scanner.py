@@ -56,17 +56,21 @@ class Scanner:
         try:
             import git
             repo = git.Repo(target, search_parent_directories=True)
+            if repo.working_tree_dir is None:
+                raise RuntimeError("bare repository has no working tree")
             repo_root = Path(repo.working_tree_dir)
             changed: set[Path] = set()
             # Staged changes
-            for item in repo.index.diff("HEAD"):
-                changed.add(repo_root / item.a_path)
+            for diff_item in repo.index.diff("HEAD"):
+                if diff_item.a_path:
+                    changed.add(repo_root / diff_item.a_path)
             # Unstaged changes
-            for item in repo.index.diff(None):
-                changed.add(repo_root / item.a_path)
+            for diff_item in repo.index.diff(None):
+                if diff_item.a_path:
+                    changed.add(repo_root / diff_item.a_path)
             # Untracked files
-            for item in repo.untracked_files:
-                changed.add(repo_root / item)
+            for untracked in repo.untracked_files:
+                changed.add(repo_root / untracked)
             return [p for p in changed if p.exists()]
         except Exception as exc:
             warnings.warn(

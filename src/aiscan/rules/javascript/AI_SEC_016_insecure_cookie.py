@@ -20,6 +20,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -42,7 +43,7 @@ def _line_plus_window(parsed: ParsedFile, i: int, span: int = 4) -> str:
     return " ".join(parsed.lines[i - 1 : end])
 
 
-class InsecureCookieRule:
+class InsecureCookieRule(BaseRule):
     rule_id = "AI-SEC-016"
     rule_name = "Insecure Cookie Flags"
     severity = Severity.HIGH

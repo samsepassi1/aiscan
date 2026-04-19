@@ -20,6 +20,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -39,7 +40,7 @@ TAINT_PATTERN = re.compile(
 STATIC_URL_ONLY = re.compile(r"""\bfetch\s*\(\s*['"`]https?://[^'"`${}]+['"`]\s*[),]""")
 
 
-class SSRFInServerFetchRule:
+class SSRFInServerFetchRule(BaseRule):
     rule_id = "AI-SEC-015"
     rule_name = "SSRF in Server-Side Fetch"
     severity = Severity.HIGH

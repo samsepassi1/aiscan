@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -33,7 +34,7 @@ SANITIZER_MARKERS = [
 ]
 
 
-class DangerousInnerHTMLRule:
+class DangerousInnerHTMLRule(BaseRule):
     rule_id = "AI-SEC-014"
     rule_name = "Dangerous Inner HTML"
     severity = Severity.HIGH

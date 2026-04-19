@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -33,7 +34,7 @@ LANGUAGE_PATTERNS: dict[str, list[re.Pattern]] = {
 }
 
 
-class PathTraversalRule:
+class PathTraversalRule(BaseRule):
     rule_id = "AI-SEC-011"
     rule_name = "Path Traversal"
     severity = Severity.HIGH

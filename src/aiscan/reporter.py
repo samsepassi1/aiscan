@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from importlib.metadata import version as pkg_version, PackageNotFoundError
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from rich.console import Console
 from rich.table import Table
@@ -64,7 +64,7 @@ def generate_sarif(result: ScanResult) -> dict:
 
     sarif_results = []
     for f in result.findings:
-        sarif_result = {
+        sarif_result: dict[str, Any] = {
             "ruleId": f.rule_id,
             "level": SEVERITY_TO_SARIF_LEVEL[f.severity],
             "message": {"text": f.message},

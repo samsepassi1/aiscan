@@ -9,10 +9,11 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
-class WeakCryptoRule:
+class WeakCryptoRule(BaseRule):
     rule_id = "AI-SEC-003"
     rule_name = "Weak Cryptographic Algorithm"
     severity = Severity.HIGH

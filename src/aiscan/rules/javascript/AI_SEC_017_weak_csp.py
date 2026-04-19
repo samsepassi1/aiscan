@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -90,7 +91,7 @@ CSP_UNSAFE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 ]
 
 
-class WeakCSPRule:
+class WeakCSPRule(BaseRule):
     rule_id = "AI-SEC-017"
     rule_name = "Weak Content Security Policy"
     severity = Severity.MEDIUM

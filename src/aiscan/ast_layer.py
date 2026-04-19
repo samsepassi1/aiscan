@@ -47,7 +47,7 @@ class ParsedFile:
     def get_node_text(self, node: object) -> str:
         """Extract source text for a given tree-sitter node."""
         # node.start_byte and node.end_byte are byte offsets into self.source
-        return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
+        return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")  # type: ignore[attr-defined]
 
     def get_line(self, line_number: int) -> str:
         """Return the source line at 1-based line_number, or '' if out of range."""
@@ -71,7 +71,7 @@ class ASTLayer:
 
     def _get_parser(self, language: str) -> object:
         if language not in self._parsers:
-            self._parsers[language] = get_parser(language)
+            self._parsers[language] = get_parser(language)  # type: ignore[arg-type]
         return self._parsers[language]
 
     def parse_file(self, path: Path) -> ParsedFile | None:
@@ -85,7 +85,7 @@ class ASTLayer:
         except (OSError, PermissionError):
             return None
         parser = self._get_parser(language)
-        tree = parser.parse(source)
+        tree = parser.parse(source)  # type: ignore[attr-defined]
         lines = source.decode("utf-8", errors="replace").splitlines()
         return ParsedFile(
             path=path,

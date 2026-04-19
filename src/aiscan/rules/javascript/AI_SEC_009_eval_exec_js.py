@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -13,7 +14,7 @@ NEW_FUNCTION_PATTERN = re.compile(r"\bnew\s+Function\s*\(")
 STRING_LITERAL_ONLY = re.compile(r"""\beval\s*\(\s*["'`][^"'`]*["'`]\s*\)""")
 
 
-class JSEvalExecRule:
+class JSEvalExecRule(BaseRule):
     rule_id = "AI-SEC-009"
     rule_name = "Dynamic Code Execution (JavaScript)"
     severity = Severity.CRITICAL

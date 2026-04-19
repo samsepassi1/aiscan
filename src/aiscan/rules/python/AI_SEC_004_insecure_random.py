@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -25,7 +26,7 @@ RANDOM_CALL_PATTERN = re.compile(
 )
 
 
-class InsecureRandomRule:
+class InsecureRandomRule(BaseRule):
     rule_id = "AI-SEC-004"
     rule_name = "Insecure Random Number Generator"
     severity = Severity.HIGH

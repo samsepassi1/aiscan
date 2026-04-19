@@ -10,10 +10,11 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
-class UnsafeDeserializationRule:
+class UnsafeDeserializationRule(BaseRule):
     rule_id = "AI-SEC-008"
     rule_name = "Unsafe Deserialization"
     severity = Severity.CRITICAL

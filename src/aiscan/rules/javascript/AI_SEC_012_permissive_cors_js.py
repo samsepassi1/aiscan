@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -21,7 +22,7 @@ WILDCARD_CORS_PATTERNS = [
 ]
 
 
-class PermissiveCORSRule:
+class PermissiveCORSRule(BaseRule):
     rule_id = "AI-SEC-012"
     rule_name = "Permissive CORS Configuration"
     severity = Severity.HIGH

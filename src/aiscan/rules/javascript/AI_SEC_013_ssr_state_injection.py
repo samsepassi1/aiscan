@@ -23,6 +23,7 @@ from __future__ import annotations
 import re
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -52,7 +53,7 @@ SAFE_SERIALIZER_MARKERS = [
 ]
 
 
-class SSRStateInjectionRule:
+class SSRStateInjectionRule(BaseRule):
     rule_id = "AI-SEC-013"
     rule_name = "SSR State Hydration Injection"
     severity = Severity.CRITICAL

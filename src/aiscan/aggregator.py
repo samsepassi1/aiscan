@@ -45,16 +45,16 @@ def merge(
     merged: dict[tuple, Finding] = {}
 
     for finding in ast_findings + llm_findings:
-        key = _dedup_key(finding)
-        if key not in merged:
-            merged[key] = finding
+        dedup_key = _dedup_key(finding)
+        if dedup_key not in merged:
+            merged[dedup_key] = finding
         else:
-            existing = merged[key]
+            existing = merged[dedup_key]
             # Keep the more severe finding; mark as HYBRID
             if SEVERITY_ORDER[finding.severity.value] > SEVERITY_ORDER[existing.severity.value]:
-                merged[key] = finding.model_copy(update={"detection_method": DetectionMethod.HYBRID})
+                merged[dedup_key] = finding.model_copy(update={"detection_method": DetectionMethod.HYBRID})
             else:
-                merged[key] = existing.model_copy(update={"detection_method": DetectionMethod.HYBRID})
+                merged[dedup_key] = existing.model_copy(update={"detection_method": DetectionMethod.HYBRID})
 
     # Apply suppressions
     result: list[Finding] = []

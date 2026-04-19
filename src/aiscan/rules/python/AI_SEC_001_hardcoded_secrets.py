@@ -11,6 +11,7 @@ import re
 from collections import Counter
 
 from aiscan.ast_layer import ParsedFile
+from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
@@ -67,7 +68,7 @@ def looks_like_real_secret(value: str) -> bool:
     return shannon_entropy(stripped) >= ENTROPY_THRESHOLD
 
 
-class HardcodedSecretsRule:
+class HardcodedSecretsRule(BaseRule):
     rule_id = "AI-SEC-001"
     rule_name = "Hardcoded Secret"
     severity = Severity.CRITICAL
@@ -94,9 +95,9 @@ class HardcodedSecretsRule:
         findings: list[Finding] = []
         try:
             from tree_sitter_language_pack import get_language
-            lang = get_language(parsed.language)
-            query = lang.query(self._QUERY_SRC)
-            captures = query.captures(parsed.tree.root_node)
+            lang = get_language(parsed.language)  # type: ignore[arg-type]
+            query = lang.query(self._QUERY_SRC)  # type: ignore[attr-defined]
+            captures = query.captures(parsed.tree.root_node)  # type: ignore[attr-defined]
         except Exception:
             # Fallback: manual traversal if query API unavailable
             return self._manual_check(parsed)
@@ -114,7 +115,7 @@ class HardcodedSecretsRule:
         # Group by row, collecting all name nodes and value nodes per row
         by_row: dict[int, dict[str, list[object]]] = {}
         for node, cap_name in pairs:
-            row = node.start_point[0]
+            row = node.start_point[0]  # type: ignore[attr-defined]
             if row not in by_row:
                 by_row[row] = {}
             by_row[row].setdefault(cap_name, []).append(node)
@@ -141,8 +142,8 @@ class HardcodedSecretsRule:
                     file_path=str(parsed.path),
                     line_start=line,
                     line_end=line,
-                    column_start=name_node.start_point[1],
-                    column_end=value_node.end_point[1],
+                    column_start=name_node.start_point[1],  # type: ignore[attr-defined]
+                    column_end=value_node.end_point[1],  # type: ignore[attr-defined]
                     message=(
                         f"Hardcoded secret detected in variable '{var_name}'. "
                         "Embedding credentials in source code exposes them to version control and logs."
