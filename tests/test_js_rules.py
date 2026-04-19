@@ -252,3 +252,36 @@ class TestJSRules:
         for f in sec002:
             assert "CWE-862" in f.cwe_ids
             assert "CWE-306" in f.cwe_ids
+
+    def test_auth_lib_import_reduces_confidence_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        f = tmp_path / "auth_import.js"
+        f.write_text(
+            "const jwt = require('jsonwebtoken');\n"
+            "\n"
+            "app.delete('/api/user/:id', async (req, res) => {\n"
+            "  await User.findByIdAndDelete(req.params.id);\n"
+            "  res.json({ deleted: req.params.id });\n"
+            "});\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 1
+        assert sec002[0].confidence < 0.80
+        assert "Auth library" in sec002[0].message
+
+    def test_req_session_non_auth_not_suppressed_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        f = tmp_path / "session_cart.js"
+        f.write_text(
+            "app.post('/api/orders', async (req, res) => {\n"
+            "  const cart = req.session.cart;\n"
+            "  const order = await Order.create({ items: cart });\n"
+            "  res.json(order);\n"
+            "});\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 1, "Non-auth session access must not suppress the finding"

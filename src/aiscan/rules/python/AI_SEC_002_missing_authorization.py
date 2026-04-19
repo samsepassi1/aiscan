@@ -69,7 +69,7 @@ SENSITIVE_PATH_PY = re.compile(
     r"users?|accounts?|profile|settings?|config|configuration|"
     r"delete|remove|destroy|edit|update|create|add|upload|"
     r"payment|billing|invoice|orders?|checkout|"
-    r"api/(?:v\d+/)?(?!public|health|status|ping|docs|openapi|redoc|favicon))",
+    r"api/(?:v\d+/)?(?!(?:public|health|status|ping|docs|openapi|redoc|favicon)(?:/|$)))",
     re.IGNORECASE,
 )
 
@@ -81,7 +81,7 @@ MUTATION_OPS_PY = re.compile(
     r"\b(?:\.save\(\)|\.delete\(\)|\.commit\(\)|\.update\(|\.insert\(|"
     r"\.create\(|db\.session\.add|db\.session\.commit|"
     r"\.filter_by.*\.delete|\.bulk_create|\.bulk_update|"
-    r"cursor\.execute\b|\.execute\b)",
+    r"cursor\.execute\b|db\.execute\b|conn\.execute\b|session\.execute\b)",
     re.IGNORECASE,
 )
 
@@ -100,6 +100,12 @@ _CONTEXT_FORWARD = 20   # lines into handler body
 
 # Extracts explicit methods from methods=['DELETE', 'POST'] style arguments
 METHODS_ARG_PY = re.compile(r"methods\s*=\s*\[([^\]]+)\]", re.IGNORECASE)
+
+# Mutation priority for picking the most dangerous method from a multi-method route
+_METHOD_PRIORITY: dict[str, int] = {"delete": 4, "post": 3, "put": 2, "patch": 2, "get": 1}
+
+# Admin/sensitive path check — compiled once at module level
+_ADMIN_PATH_PY = re.compile(r"/admin|/staff|/superuser|/manage", re.IGNORECASE)
 
 
 class MissingAuthorizationRule(BaseRule):
@@ -129,13 +135,13 @@ class MissingAuthorizationRule(BaseRule):
             url_path = route_m.group("path")
             raw_method = route_m.group("method").lower()
 
-            # For @app.route(..., methods=['DELETE']), extract the explicit method
+            # For @app.route(..., methods=['GET', 'DELETE']), pick the most dangerous method
             if raw_method == "route":
                 methods_m = METHODS_ARG_PY.search(line)
                 if methods_m:
                     explicit = [m.strip().strip("'\"").lower() for m in methods_m.group(1).split(",")]
                     explicit = [m for m in explicit if m]
-                    http_method = explicit[0] if explicit else "get"
+                    http_method = max(explicit, key=lambda m: _METHOD_PRIORITY.get(m, 0), default="get")
                 else:
                     http_method = "get"
             else:
@@ -161,7 +167,7 @@ class MissingAuthorizationRule(BaseRule):
             if any(pat.search(context_text) for pat in _AUTH_PATTERNS_PY):
                 continue
 
-            is_admin = bool(re.search(r"/admin|/staff|/superuser|/manage", url_path, re.IGNORECASE))
+            is_admin = bool(_ADMIN_PATH_PY.search(url_path))
             if is_mutation or is_admin:
                 severity = Severity.CRITICAL
                 base_confidence = 0.85 if is_admin else 0.82

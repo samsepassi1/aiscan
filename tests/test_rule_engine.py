@@ -172,3 +172,39 @@ class TestRuleEngine:
         findings = rule_engine.run(parsed)
         sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
         assert len(sec002) == 0, f"Health endpoint falsely flagged: {sec002}"
+
+    def test_multi_method_route_picks_most_dangerous_method(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        f = tmp_path / "multi_method.py"
+        f.write_text(
+            "@app.route('/api/posts/<int:id>', methods=['GET', 'DELETE'])\n"
+            "def post_detail(id):\n"
+            "    return 'ok'\n"
+        )
+        parsed = ast_layer.parse_file(f)
+        assert parsed is not None
+        findings = rule_engine.run(parsed)
+        sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 1
+        assert sec002[0].severity == Severity.CRITICAL
+        assert sec002[0].message.startswith("DELETE")
+
+    def test_auth_lib_import_reduces_confidence(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        f = tmp_path / "auth_import.py"
+        f.write_text(
+            "from flask_login import login_manager\n"
+            "\n"
+            "@app.route('/admin/users')\n"
+            "def admin_users():\n"
+            "    return 'ok'\n"
+        )
+        parsed = ast_layer.parse_file(f)
+        assert parsed is not None
+        findings = rule_engine.run(parsed)
+        sec002 = [fi for fi in findings if fi.rule_id == "AI-SEC-002"]
+        assert len(sec002) == 1
+        assert sec002[0].confidence < 0.80
+        assert "Auth library" in sec002[0].message

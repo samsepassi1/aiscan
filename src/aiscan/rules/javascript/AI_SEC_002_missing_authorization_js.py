@@ -59,8 +59,8 @@ _AUTH_PATTERNS_JS: list[re.Pattern[str]] = [
     re.compile(r"reply\.status\s*\(\s*401"),
     re.compile(r"return\s+res\.status\s*\(\s*401"),
     re.compile(r"req\.isAuthenticated\s*\("),
-    re.compile(r"req\.session\b"),
-    re.compile(r"jsonwebtoken|jwt\.verify", re.IGNORECASE),
+    re.compile(r"req\.session\.(?:user|userId|account|identity)\b"),
+    re.compile(r"\bjwt\.verify\b", re.IGNORECASE),
 ]
 
 # ── Sensitivity classifier ────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ SENSITIVE_PATH_JS = re.compile(
     r"users?|accounts?|profile|settings?|config|configuration|"
     r"delete|remove|update|edit|create|add|upload|"
     r"payment|billing|invoice|orders?|checkout|"
-    r"api/(?:v\d+/)?(?!public|health|status|ping|docs|swagger|favicon))",
+    r"api/(?:v\d+/)?(?!(?:public|health|status|ping|docs|swagger|favicon)(?:/|$)))",
     re.IGNORECASE,
 )
 
@@ -97,6 +97,8 @@ FILE_AUTH_IMPORT_JS = re.compile(
 
 _CONTEXT_BACK = 2
 _CONTEXT_FORWARD = 20
+
+_ADMIN_PATH_JS = re.compile(r"/admin|/staff|/manage", re.IGNORECASE)
 
 
 class MissingAuthorizationJSRule(BaseRule):
@@ -150,7 +152,7 @@ class MissingAuthorizationJSRule(BaseRule):
             if any(pat.search(context_text) for pat in _AUTH_PATTERNS_JS):
                 continue
 
-            is_admin = bool(re.search(r"/admin|/staff|/manage", url_path, re.IGNORECASE))
+            is_admin = bool(_ADMIN_PATH_JS.search(url_path))
             if is_mutation or is_admin:
                 severity = Severity.CRITICAL
                 base_confidence = 0.82 if is_admin else 0.80
