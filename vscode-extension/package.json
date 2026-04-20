@@ -3,7 +3,7 @@
   "displayName": "aiscan — AI Code Security",
   "description": "Real-time security scanning for AI-generated code. Detects hardcoded secrets, weak crypto, unsafe deserialization, and more.",
   "version": "0.1.0",
-  "publisher": "walmart-global-tech",
+  "publisher": "samsepassi",
   "engines": {
     "vscode": "^1.85.0"
   },

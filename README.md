@@ -1,6 +1,6 @@
 # aiscan — AI Code Security Scanner
 
-**Author:** Sam Sepassi, Staff AppSec Engineer, Walmart Global Tech
+**Author:** Sam Sepassi
 
 A hybrid AST + LLM security scanner purpose-built for the vulnerability patterns that AI coding assistants (GitHub Copilot, Cursor, ChatGPT, Claude) are statistically known to introduce.
 
@@ -37,9 +37,9 @@ aiscan scan . --llm --llm-provider openai --llm-model gpt-4o
 # Zero-egress mode with local Ollama
 aiscan scan . --llm --llm-provider local --llm-model codellama
 
-# Enterprise Ollama endpoint
+# Self-hosted Ollama endpoint
 aiscan scan . --llm --llm-provider local \
-  --llm-base-url http://internal-ollama.walmart.net:11434/v1 \
+  --llm-base-url http://localhost:11434/v1 \
   --llm-model codellama
 
 # Output SARIF for GitHub Security tab
@@ -103,7 +103,7 @@ aiscan rules
 ## GitHub Actions
 
 ```yaml
-- uses: walmartlabs/aiscan@v1
+- uses: samsepassi1/aiscan@v1
   with:
     target: "src/"
     severity: "HIGH"
@@ -130,7 +130,7 @@ Install the extension, then findings appear inline in the Problems panel. Suppor
 ## Development
 
 ```bash
-git clone https://github.com/walmartlabs/aiscan
+git clone https://github.com/samsepassi1/aiscan
 cd aiscan
 pip install -e ".[dev]"
 pytest tests/ -v
@@ -138,4 +138,4 @@ pytest tests/ -v
 
 ## License
 
-MIT. Copyright © 2024 Walmart Global Tech.
+MIT. Copyright © 2025 Sam Sepassi.

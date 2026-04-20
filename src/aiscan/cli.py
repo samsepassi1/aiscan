@@ -50,7 +50,7 @@ def main() -> None:
     default=None,
     envvar="AISCAN_LLM_BASE_URL",
     help="Custom LLM endpoint URL. For Ollama: http://localhost:11434/v1. "
-         "For enterprise internal: http://internal-ollama.walmart.net:11434/v1.",
+         "For self-hosted Ollama: http://localhost:11434/v1.",
 )
 @click.option(
     "--severity",

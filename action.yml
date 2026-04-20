@@ -1,6 +1,6 @@
 name: "aiscan"
 description: "AI-native security scanner for AI-generated code — catches the vulnerabilities AI coding assistants introduce"
-author: "Sam Sepassi <sam.sepassi@walmart.com>"
+author: "Sam Sepassi <samsepassi2@gmail.com>"
 
 branding:
   icon: "shield"
