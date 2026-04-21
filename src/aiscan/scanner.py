@@ -120,12 +120,20 @@ class Scanner:
         for pf in parsed_files:
             ast_findings.extend(self._rule_engine.run(pf))
 
-        # LLM pass (optional)
+        # LLM pass (optional) — only on files that AST already flagged
         llm_findings: list[Finding] = []
         if self.llm_enabled and self._llm_engine:
+            ast_by_file: dict[str, list[Finding]] = {}
+            for af in ast_findings:
+                ast_by_file.setdefault(af.file_path, []).append(af)
             for pf in parsed_files:
+                file_ast = ast_by_file.get(str(pf.path))
+                if not file_ast:
+                    continue
                 try:
-                    llm_findings.extend(self._llm_engine.analyze(pf))
+                    llm_findings.extend(
+                        self._llm_engine.analyze(pf, context_findings=file_ast)
+                    )
                 except Exception as exc:
                     warnings.warn(
                         f"aiscan: LLM analysis failed for {pf.path} ({exc}); skipping file.",

@@ -89,24 +89,52 @@ class LLMEngine:
 
         return self._client
 
-    def analyze(self, parsed: ParsedFile, max_lines: int = 500) -> list[Finding]:
-        """Analyze a parsed file. Returns cached results when available."""
+    def analyze(
+        self,
+        parsed: ParsedFile,
+        max_lines: int = 500,
+        context_findings: list[Finding] | None = None,
+    ) -> list[Finding]:
+        """Analyze a parsed file. Returns cached results when available.
+
+        Pass context_findings (AST results for this file) so the LLM focuses on
+        additional vulnerabilities rather than re-reporting what AST already caught.
+        """
         source = "\n".join(parsed.lines[:max_lines])
-        # Use SHA-256 of (provider, model, source) as cache key — hash() is process-local
-        digest = hashlib.sha256(f"{self.provider}:{self.model}:{source}".encode()).hexdigest()
-        cache_key = f"v1:{digest}"
+        ctx_key = ":".join(f"{f.rule_id}@{f.line_start}" for f in (context_findings or []))
+        digest = hashlib.sha256(
+            f"{self.provider}:{self.model}:{source}:{ctx_key}".encode()
+        ).hexdigest()
+        cache_key = f"v2:{digest}"
 
         if cache_key in self._cache:
             raw: str = self._cache[cache_key]
         else:
-            raw = self._call_llm(source, parsed.language)
+            raw = self._call_llm(source, parsed.language, context_findings)
             self._cache[cache_key] = raw
 
         return self._parse_response(raw, parsed)
 
-    def _call_llm(self, source: str, language: str) -> str:
+    def _call_llm(
+        self,
+        source: str,
+        language: str,
+        context_findings: list[Finding] | None = None,
+    ) -> str:
         """Make the actual LLM API call and return the raw text response."""
-        user_msg = f"Language: {language}\n\nCode to review:\n```{language}\n{source}\n```"
+        if context_findings:
+            ctx_lines = "\n".join(
+                f"  - Line {f.line_start}: [{f.rule_id}] {f.message}"
+                for f in context_findings
+            )
+            user_msg = (
+                f"Language: {language}\n\n"
+                f"Static analysis already flagged these issues — do NOT re-report them. "
+                f"Find ADDITIONAL vulnerabilities not yet caught:\n{ctx_lines}\n\n"
+                f"Code to review:\n```{language}\n{source}\n```"
+            )
+        else:
+            user_msg = f"Language: {language}\n\nCode to review:\n```{language}\n{source}\n```"
         client = self._get_client()
 
         if self.provider == "anthropic":
@@ -138,12 +166,15 @@ class LLMEngine:
     def _parse_response(self, raw: str, parsed: ParsedFile) -> list[Finding]:
         """Parse the LLM response into Finding objects. Handles markdown code block wrapping."""
         try:
-            # Strip markdown fences first, then extract the JSON array (non-greedy)
-            stripped = re.sub(r"```(?:json)?\s*|\s*```", "", raw)
-            json_match = re.search(r"\[.*?\]", stripped, re.DOTALL)
-            if not json_match:
-                return []
-            data = json.loads(json_match.group())
+            stripped = re.sub(r"```(?:json)?\s*|\s*```", "", raw).strip()
+            # Try the whole stripped text first (cleanest case), then extract outermost [...]
+            try:
+                data = json.loads(stripped)
+            except json.JSONDecodeError:
+                json_match = re.search(r"\[.*\]", stripped, re.DOTALL)
+                if not json_match:
+                    return []
+                data = json.loads(json_match.group())
             findings: list[Finding] = []
             for item in data:
                 line_start = max(1, item.get("line_start", 1))
