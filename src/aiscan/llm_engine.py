@@ -5,7 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import warnings
 from typing import Any
+
+from pydantic import ValidationError
 
 from aiscan.ast_layer import ParsedFile
 from aiscan.models import DetectionMethod, Finding, Severity
@@ -100,6 +103,13 @@ class LLMEngine:
         Pass context_findings (AST results for this file) so the LLM focuses on
         additional vulnerabilities rather than re-reporting what AST already caught.
         """
+        if len(parsed.lines) > max_lines:
+            warnings.warn(
+                f"aiscan: {parsed.path} has {len(parsed.lines)} lines; "
+                f"LLM will only see the first {max_lines}. Findings beyond line "
+                f"{max_lines} will not be detected by the LLM tier.",
+                stacklevel=2,
+            )
         source = "\n".join(parsed.lines[:max_lines])
         ctx_key = ":".join(f"{f.rule_id}@{f.line_start}" for f in (context_findings or []))
         digest = hashlib.sha256(
@@ -140,45 +150,68 @@ class LLMEngine:
         if self.provider == "anthropic":
             response = client.messages.create(
                 model=self.model,
-                max_tokens=4096,
+                max_tokens=8192,
                 system=LLM_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_msg}],
             )
-            return response.content[0].text
+            # Iterate content blocks — first block may be tool_use, thinking, etc.
+            for block in response.content:
+                if getattr(block, "type", None) == "text":
+                    return block.text or ""
+            return ""
 
-        else:
-            # OpenAI or Ollama (OpenAI-compatible)
-            extra_kwargs: dict[str, Any] = {}
-            if "gpt" in self.model:
-                extra_kwargs["response_format"] = {"type": "json_object"}
+        # OpenAI (not Ollama): safe to request JSON mode.
+        extra_kwargs: dict[str, Any] = {}
+        if self.provider == "openai":
+            extra_kwargs["response_format"] = {"type": "json_object"}
 
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": LLM_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_msg},
-                ],
-                max_tokens=4096,
-                **extra_kwargs,
-            )
-            return response.choices[0].message.content
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": LLM_SYSTEM_PROMPT},
+                {"role": "user", "content": user_msg},
+            ],
+            max_tokens=8192,
+            **extra_kwargs,
+        )
+        return response.choices[0].message.content or ""
 
     def _parse_response(self, raw: str, parsed: ParsedFile) -> list[Finding]:
         """Parse the LLM response into Finding objects. Handles markdown code block wrapping."""
+        if not raw:
+            return []
+        stripped = re.sub(r"```(?:json)?\s*|\s*```", "", raw).strip()
+        # Try the whole stripped text first (cleanest case), then extract outermost [...]
         try:
-            stripped = re.sub(r"```(?:json)?\s*|\s*```", "", raw).strip()
-            # Try the whole stripped text first (cleanest case), then extract outermost [...]
+            data = json.loads(stripped)
+        except json.JSONDecodeError:
+            json_match = re.search(r"\[.*\]", stripped, re.DOTALL)
+            if not json_match:
+                warnings.warn(
+                    f"aiscan: LLM response for {parsed.path} contained no JSON array; "
+                    f"got {stripped[:120]!r}.",
+                    stacklevel=2,
+                )
+                return []
             try:
-                data = json.loads(stripped)
-            except json.JSONDecodeError:
-                json_match = re.search(r"\[.*\]", stripped, re.DOTALL)
-                if not json_match:
-                    return []
                 data = json.loads(json_match.group())
-            findings: list[Finding] = []
-            for item in data:
-                line_start = max(1, item.get("line_start", 1))
-                line_end = max(line_start, item.get("line_end", line_start))
+            except json.JSONDecodeError as exc:
+                warnings.warn(
+                    f"aiscan: LLM response for {parsed.path} had malformed JSON ({exc}).",
+                    stacklevel=2,
+                )
+                return []
+
+        if not isinstance(data, list):
+            return []
+
+        findings: list[Finding] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            try:
+                line_start = max(1, int(item.get("line_start", 1)))
+                line_end = max(line_start, int(item.get("line_end", line_start)))
                 findings.append(Finding(
                     rule_id=item.get("rule_id", "AI-LLM-001"),
                     rule_name=item.get("rule_name", "LLM Finding"),
@@ -193,6 +226,9 @@ class LLMEngine:
                     remediation=item.get("remediation", ""),
                     code_snippet=parsed.get_snippet(line_start, line_end),
                 ))
-            return findings
-        except Exception:
-            return []
+            except (ValueError, TypeError, ValidationError) as exc:
+                warnings.warn(
+                    f"aiscan: skipping malformed LLM finding for {parsed.path} ({exc}).",
+                    stacklevel=2,
+                )
+        return findings

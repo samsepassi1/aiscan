@@ -94,7 +94,7 @@ CSP_UNSAFE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 class WeakCSPRule(BaseRule):
     rule_id = "AI-SEC-017"
     rule_name = "Weak Content Security Policy"
-    severity = Severity.MEDIUM
+    severity = Severity.HIGH
     cwe_ids = ["CWE-693", "CWE-1021"]
     languages = ["javascript", "typescript"]
     detection_method = DetectionMethod.AST

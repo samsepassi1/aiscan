@@ -8,7 +8,10 @@ from aiscan.ast_layer import ParsedFile
 from aiscan.models import DetectionMethod, Finding, SEVERITY_ORDER
 
 
-SUPPRESS_COMMENT = re.compile(r"#\s*aiscan:\s*suppress(?:\s+(.*))?", re.IGNORECASE)
+SUPPRESS_COMMENT = re.compile(
+    r"(?:#|//|/\*)\s*aiscan:\s*suppress(?:\s+([^*]*?))?\s*(?:\*/)?$",
+    re.IGNORECASE,
+)
 
 
 def _dedup_key(finding: Finding) -> tuple:
@@ -48,13 +51,18 @@ def merge(
         dedup_key = _dedup_key(finding)
         if dedup_key not in merged:
             merged[dedup_key] = finding
+            continue
+        existing = merged[dedup_key]
+        winner = (
+            finding
+            if SEVERITY_ORDER[finding.severity.value] > SEVERITY_ORDER[existing.severity.value]
+            else existing
+        )
+        # Only mark HYBRID when the two findings came from different detection tiers
+        if existing.detection_method != finding.detection_method:
+            merged[dedup_key] = winner.model_copy(update={"detection_method": DetectionMethod.HYBRID})
         else:
-            existing = merged[dedup_key]
-            # Keep the more severe finding; mark as HYBRID
-            if SEVERITY_ORDER[finding.severity.value] > SEVERITY_ORDER[existing.severity.value]:
-                merged[dedup_key] = finding.model_copy(update={"detection_method": DetectionMethod.HYBRID})
-            else:
-                merged[dedup_key] = existing.model_copy(update={"detection_method": DetectionMethod.HYBRID})
+            merged[dedup_key] = winner
 
     # Apply suppressions
     result: list[Finding] = []

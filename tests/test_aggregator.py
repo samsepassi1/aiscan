@@ -83,6 +83,21 @@ class TestMergeDeduplication:
         result = merge([f1, f2], [])
         assert len(result) == 2
 
+    def test_duplicate_ast_findings_stay_ast(self):
+        """Same-tier duplicates should not be labeled HYBRID."""
+        f1 = _finding(detection_method=DetectionMethod.AST, confidence=0.8)
+        f2 = _finding(detection_method=DetectionMethod.AST, confidence=0.9)
+        result = merge([f1, f2], [])
+        assert len(result) == 1
+        assert result[0].detection_method == DetectionMethod.AST
+
+    def test_duplicate_llm_findings_stay_llm(self):
+        f1 = _finding(detection_method=DetectionMethod.LLM)
+        f2 = _finding(detection_method=DetectionMethod.LLM)
+        result = merge([], [f1, f2])
+        assert len(result) == 1
+        assert result[0].detection_method == DetectionMethod.LLM
+
 
 class TestSuppressionByAggregator:
     def test_suppressed_finding_marked(self):
@@ -111,6 +126,35 @@ class TestSuppressionByAggregator:
     def test_suppression_reason_empty_when_no_annotation(self):
         f = _finding(file_path="src/app.py", line_start=1, line_end=1)
         pf = _parsed_file("src/app.py", ["api_key = 'x'  # aiscan: suppress"])
+        result = merge([f], [], [pf])
+        assert result[0].suppressed is True
+        assert result[0].suppression_reason == ""
+
+    def test_js_line_comment_suppression(self):
+        """// aiscan: suppress should work for JS/TS files."""
+        f = _finding(file_path="src/app.js", line_start=1, line_end=1)
+        pf = _parsed_file("src/app.js", [
+            "const token = process.env.TOKEN; // aiscan: suppress env-sourced",
+        ])
+        result = merge([f], [], [pf])
+        assert result[0].suppressed is True
+        assert "env-sourced" in result[0].suppression_reason
+
+    def test_js_block_comment_suppression(self):
+        """/* aiscan: suppress */ block comments should also suppress."""
+        f = _finding(file_path="src/app.ts", line_start=1, line_end=1)
+        pf = _parsed_file("src/app.ts", [
+            "const key = process.env.KEY; /* aiscan: suppress already-safe */",
+        ])
+        result = merge([f], [], [pf])
+        assert result[0].suppressed is True
+        assert "already-safe" in result[0].suppression_reason
+
+    def test_js_suppression_without_reason(self):
+        f = _finding(file_path="src/app.js", line_start=1, line_end=1)
+        pf = _parsed_file("src/app.js", [
+            "const k = v; // aiscan: suppress",
+        ])
         result = merge([f], [], [pf])
         assert result[0].suppressed is True
         assert result[0].suppression_reason == ""

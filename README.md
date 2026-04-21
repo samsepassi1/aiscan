@@ -54,17 +54,31 @@ aiscan scan . --diff-only --exit-code
 
 ## Inline Suppression
 
-Add `# aiscan: suppress` to a line to suppress all findings on that line:
+Add an `aiscan: suppress` comment to a line to suppress all findings on
+that line. The comment syntax matches the file's language:
 
 ```python
+# Python
 API_KEY = os.environ["API_KEY"]  # aiscan: suppress not a real secret
 ```
+
+```javascript
+// JavaScript / TypeScript
+const token = process.env.TOKEN; // aiscan: suppress already env-sourced
+
+/* C-style block comments also work */
+const key = process.env.KEY; /* aiscan: suppress */
+```
+
+An optional reason after `suppress` is recorded in the finding's
+`suppression_reason` and surfaced in SARIF and JSON output.
 
 ## Detection Rules
 
 | Rule ID | Name | Severity | CWE |
 |---------|------|----------|-----|
 | AI-SEC-001 | Hardcoded Secret | CRITICAL | CWE-259, CWE-321, CWE-798 |
+| AI-SEC-002 | Missing Authorization Check | CRITICAL | CWE-862, CWE-306 |
 | AI-SEC-003 | Weak Cryptographic Algorithm | HIGH | CWE-327, CWE-328 |
 | AI-SEC-004 | Insecure Random Number Generator | HIGH | CWE-330, CWE-338 |
 | AI-SEC-008 | Unsafe Deserialization | CRITICAL | CWE-502 |
@@ -75,7 +89,7 @@ API_KEY = os.environ["API_KEY"]  # aiscan: suppress not a real secret
 | AI-SEC-014 | Dangerous Inner HTML | HIGH | CWE-79, CWE-80 |
 | AI-SEC-015 | SSRF in Server-Side Fetch | HIGH | CWE-918 |
 | AI-SEC-016 | Insecure Cookie Flags | HIGH | CWE-614, CWE-1004, CWE-1275 |
-| AI-SEC-017 | Weak Content Security Policy | MEDIUM | CWE-693, CWE-1021 |
+| AI-SEC-017 | Weak Content Security Policy | HIGH | CWE-693, CWE-1021 |
 
 ### SSR / Electrode Coverage
 

@@ -14,12 +14,36 @@ from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
-# Python patterns
+# Taint markers — identifiers that commonly carry request-derived data in Python web code.
+_PY_TAINT = r"(?:request|flask\.request|req|user_input|form\.|args\.|params\.|query|body|cookies\.|headers\.)"
+
+# Python patterns — each requires a taint marker on the same line to avoid
+# flagging well-behaved code like open(os.path.join(CACHE_DIR, filename)).
 PY_PATTERNS = [
-    re.compile(r"""open\s*\(\s*(?:os\.path\.join\s*\([^)]*\)|f?['"]{1,3}[^'"]*['"]{1,3}\s*\+|[a-z_]+\s*\+)"""),
-    re.compile(r"""Path\s*\([^)]*(?:request|user|input|param|query|body)[^)]*\)""", re.IGNORECASE),
-    re.compile(r"""os\.path\.join\s*\([^)]*(?:request|user|input|param|query)[^)]*\)""", re.IGNORECASE),
+    # open() with concatenation or os.path.join that includes a taint marker
+    re.compile(
+        rf"""open\s*\([^)]*{_PY_TAINT}""",
+        re.IGNORECASE,
+    ),
+    # Path(...) constructed from request input
+    re.compile(
+        rf"""Path\s*\([^)]*{_PY_TAINT}[^)]*\)""",
+        re.IGNORECASE,
+    ),
+    # os.path.join with request input
+    re.compile(
+        rf"""os\.path\.join\s*\([^)]*{_PY_TAINT}[^)]*\)""",
+        re.IGNORECASE,
+    ),
 ]
+
+# Secondary proximity check: open('path/' + var) where var was assigned from a
+# taint source within the preceding 5 lines.
+_CONCAT_OPEN = re.compile(r"""open\s*\(\s*[^)]*\+\s*(?P<var>[A-Za-z_][A-Za-z0-9_]*)""")
+_TAINT_ASSIGN = re.compile(
+    rf"""(?P<var>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*[^=].*?{_PY_TAINT}""",
+    re.IGNORECASE,
+)
 
 # JS/TS patterns
 JS_PATTERNS = [
@@ -45,31 +69,46 @@ class PathTraversalRule(BaseRule):
     def check(self, parsed: ParsedFile) -> list[Finding]:
         findings: list[Finding] = []
         patterns = LANGUAGE_PATTERNS.get(parsed.language, [])
+        # Build set of tainted variable names (Python only) from assignments in the file.
+        tainted_vars: set[str] = set()
+        if parsed.language == "python":
+            for line in parsed.lines:
+                m = _TAINT_ASSIGN.search(line)
+                if m:
+                    tainted_vars.add(m.group("var"))
         for i, line in enumerate(parsed.lines, start=1):
+            matched = False
             for pattern in patterns:
                 if pattern.search(line):
-                    findings.append(Finding(
-                        rule_id=self.rule_id,
-                        rule_name=self.rule_name,
-                        severity=self.severity,
-                        file_path=str(parsed.path),
-                        line_start=i,
-                        line_end=i,
-                        message=(
-                            "Potential path traversal: user-controlled input appears to be "
-                            "used in a file path operation without sanitization. "
-                            "An attacker may supply '../' sequences to read arbitrary files."
-                        ),
-                        cwe_ids=self.cwe_ids,
-                        detection_method=self.detection_method,
-                        confidence=0.75,
-                        remediation=(
-                            "Validate and canonicalize paths before use. "
-                            "In Python: use pathlib.Path.resolve() and assert the resolved path "
-                            "starts with your intended base directory. "
-                            "Never concatenate user input directly into file paths."
-                        ),
-                        code_snippet=line.rstrip(),
-                    ))
+                    matched = True
                     break
+            # Python-only: catch open('/path/' + tainted_var) via proximity taint tracking
+            if not matched and parsed.language == "python" and tainted_vars:
+                concat_m = _CONCAT_OPEN.search(line)
+                if concat_m and concat_m.group("var") in tainted_vars:
+                    matched = True
+            if matched:
+                findings.append(Finding(
+                    rule_id=self.rule_id,
+                    rule_name=self.rule_name,
+                    severity=self.severity,
+                    file_path=str(parsed.path),
+                    line_start=i,
+                    line_end=i,
+                    message=(
+                        "Potential path traversal: user-controlled input appears to be "
+                        "used in a file path operation without sanitization. "
+                        "An attacker may supply '../' sequences to read arbitrary files."
+                    ),
+                    cwe_ids=self.cwe_ids,
+                    detection_method=self.detection_method,
+                    confidence=0.75,
+                    remediation=(
+                        "Validate and canonicalize paths before use. "
+                        "In Python: use pathlib.Path.resolve() and assert the resolved path "
+                        "starts with your intended base directory. "
+                        "Never concatenate user input directly into file paths."
+                    ),
+                    code_snippet=line.rstrip(),
+                ))
         return findings

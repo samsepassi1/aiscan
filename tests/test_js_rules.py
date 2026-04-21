@@ -41,6 +41,22 @@ class TestJSRules:
         rule_ids = [f.rule_id for f in findings]
         assert "AI-SEC-011" in rule_ids
 
+    def test_path_traversal_no_false_positive_on_benign_join(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        """open(os.path.join(INTERNAL_DIR, filename)) with no taint source must not fire."""
+        f = tmp_path / "benign.py"
+        f.write_text(
+            "import os\n"
+            "CACHE_DIR = '/var/cache/app'\n"
+            "def read_cached(filename):\n"
+            "    with open(os.path.join(CACHE_DIR, filename)) as fh:\n"
+            "        return fh.read()\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        pt = [fi for fi in findings if fi.rule_id == "AI-SEC-011"]
+        assert pt == [], f"False positive on benign path join: {pt}"
+
     def test_eval_literal_string_no_finding(self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path):
         f = tmp_path / "safe.js"
         f.write_text("const x = eval('1 + 1');\n")
