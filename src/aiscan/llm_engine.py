@@ -174,6 +174,8 @@ class LLMEngine:
             max_tokens=8192,
             **extra_kwargs,
         )
+        if not response.choices:
+            return ""
         return response.choices[0].message.content or ""
 
     def _parse_response(self, raw: str, parsed: ParsedFile) -> list[Finding]:

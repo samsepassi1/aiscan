@@ -223,6 +223,16 @@ class TestOpenAIJsonMode:
         result = engine._call_llm("code", "python")
         assert result == ""
 
+    def test_openai_empty_choices_handled(self, tmp_path: Path):
+        """Some providers return response.choices=[] under filtering/errors."""
+        engine = _engine(tmp_path, provider="openai")
+        fake_response = MagicMock()
+        fake_response.choices = []
+        engine._client = MagicMock()
+        engine._client.chat.completions.create.return_value = fake_response
+        result = engine._call_llm("code", "python")
+        assert result == ""
+
 
 # ── Caching ───────────────────────────────────────────────────────────────────
 
