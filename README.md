@@ -50,6 +50,9 @@ aiscan scan . --severity HIGH --exit-code
 
 # Scan only git-changed files (pre-commit hook)
 aiscan scan . --diff-only --exit-code
+
+# LLM reviews every file, not just those with AST findings (deeper, costlier)
+aiscan scan . --llm --llm-scan-all
 ```
 
 ## Inline Suppression
@@ -72,6 +75,11 @@ const key = process.env.KEY; /* aiscan: suppress */
 
 An optional reason after `suppress` is recorded in the finding's
 `suppression_reason` and surfaced in SARIF and JSON output.
+
+Suppression is **language-aware**: `#` is recognized only in Python, and
+`//`/`/* */` are recognized in JavaScript, TypeScript, Go, and Java. A
+`//` in a Python file is integer division, not a comment, and will not
+suppress anything — and the same applies to `#` in a JS/TS file.
 
 ## Detection Rules
 

@@ -10,11 +10,19 @@ All notable changes to aiscan are documented here. This project follows
 - `//` and `/* */` suppression comment syntax for JavaScript/TypeScript
   (`// aiscan: suppress <reason>`). Previously only `# aiscan: suppress`
   worked, which meant JS/TS files could not suppress findings.
+- Language-aware suppression comments: `#` is now recognized only in
+  Python; `//`/`/* */` are recognized only in JS/TS/Go/Java. A `//` in a
+  Python file (integer division, not a comment) no longer suppresses
+  findings; a `#` in a JS/TS file (typically inside a string literal)
+  no longer suppresses findings.
+- `--llm-scan-all` flag: run LLM analysis on every file, not just those
+  with AST findings. Higher coverage, higher cost. Useful for small
+  repos or exploratory review.
 - `--exclude PATH` (repeatable) to skip subdirectories from scanning.
 - Context-aware LLM analysis: the LLM tier now receives AST findings for
   the same file as context and is instructed to find *additional* issues
   rather than re-report what AST already caught. LLM runs are skipped on
-  files with no AST findings.
+  files with no AST findings unless `--llm-scan-all` is set.
 - `LICENSE` file (MIT).
 - `CHANGELOG.md`.
 
@@ -41,6 +49,15 @@ All notable changes to aiscan are documented here. This project follows
 - LLM engine `_parse_response` narrows exception handling, warns on
   malformed responses, and handles `None` content from OpenAI/Anthropic
   gracefully (previously silent `[]`).
+- LLM engine now warns on empty responses and on top-level JSON that is
+  not a list, rather than silently returning `[]`. Makes diagnosing
+  flaky providers much easier.
+- Migrated `AI-SEC-001` from deprecated `lang.query()` to `Query(lang,
+  src)` constructor. Eliminates the `DeprecationWarning: query() is
+  deprecated. Use the Query() constructor instead.` on every scan.
+- `Scanner._get_diff_files` handles fresh repos (no HEAD commit yet)
+  gracefully instead of falling back to a full scan with a confusing
+  warning.
 
 ### Fixed
 - LLM engine Anthropic response handling iterates content blocks to find

@@ -181,6 +181,12 @@ class LLMEngine:
     def _parse_response(self, raw: str, parsed: ParsedFile) -> list[Finding]:
         """Parse the LLM response into Finding objects. Handles markdown code block wrapping."""
         if not raw:
+            warnings.warn(
+                f"aiscan: LLM returned empty response for {parsed.path} "
+                f"(provider={self.provider}, model={self.model}). "
+                f"This may indicate a filter, rate limit, or provider error.",
+                stacklevel=2,
+            )
             return []
         stripped = re.sub(r"```(?:json)?\s*|\s*```", "", raw).strip()
         # Try the whole stripped text first (cleanest case), then extract outermost [...]
@@ -205,6 +211,12 @@ class LLMEngine:
                 return []
 
         if not isinstance(data, list):
+            warnings.warn(
+                f"aiscan: LLM response for {parsed.path} was JSON but not a list "
+                f"(got {type(data).__name__}). Expected an array of findings per "
+                f"the system prompt.",
+                stacklevel=2,
+            )
             return []
 
         findings: list[Finding] = []

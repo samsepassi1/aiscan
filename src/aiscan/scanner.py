@@ -31,6 +31,7 @@ class Scanner:
         llm_base_url: str | None = None,
         diff_only: bool = False,
         exclude: tuple[str, ...] = (),
+        llm_scan_all: bool = False,
         cache_dir: str = ".aiscan_cache",
     ) -> None:
         self.llm_enabled = llm_enabled
@@ -38,6 +39,7 @@ class Scanner:
         self.llm_model = llm_model
         self.diff_only = diff_only
         self.exclude = exclude
+        self.llm_scan_all = llm_scan_all
 
         self._ast_layer = ASTLayer()
         self._rule_engine = RuleEngine()
@@ -62,10 +64,15 @@ class Scanner:
                 raise RuntimeError("bare repository has no working tree")
             repo_root = Path(repo.working_tree_dir)
             changed: set[Path] = set()
-            # Staged changes
-            for diff_item in repo.index.diff("HEAD"):
-                if diff_item.a_path:
-                    changed.add(repo_root / diff_item.a_path)
+            # Staged changes — skipped cleanly if repo has no HEAD yet (fresh init)
+            try:
+                has_head = repo.head.is_valid()
+            except Exception:
+                has_head = False
+            if has_head:
+                for diff_item in repo.index.diff("HEAD"):
+                    if diff_item.a_path:
+                        changed.add(repo_root / diff_item.a_path)
             # Unstaged changes
             for diff_item in repo.index.diff(None):
                 if diff_item.a_path:
@@ -128,11 +135,11 @@ class Scanner:
                 ast_by_file.setdefault(af.file_path, []).append(af)
             for pf in parsed_files:
                 file_ast = ast_by_file.get(str(pf.path))
-                if not file_ast:
+                if not file_ast and not self.llm_scan_all:
                     continue
                 try:
                     llm_findings.extend(
-                        self._llm_engine.analyze(pf, context_findings=file_ast)
+                        self._llm_engine.analyze(pf, context_findings=file_ast or [])
                     )
                 except Exception as exc:
                     warnings.warn(

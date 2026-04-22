@@ -109,16 +109,25 @@ class TestParseResponse:
         assert findings[0].line_end >= findings[0].line_start
 
     def test_none_input_returns_empty(self, tmp_path: Path):
-        """Handle None from OpenAI message.content gracefully."""
+        """Handle empty content from OpenAI/Anthropic gracefully (now warns)."""
         engine = _engine(tmp_path)
         pf = _parsed(tmp_path, "x = 1\n")
-        assert engine._parse_response("", pf) == []
+        with pytest.warns(UserWarning, match="empty response"):
+            assert engine._parse_response("", pf) == []
 
     def test_non_array_json_returns_empty(self, tmp_path: Path):
-        """Top-level JSON object (not array) should not crash."""
+        """Top-level JSON object (not array) should not crash, and MUST warn."""
         engine = _engine(tmp_path)
         pf = _parsed(tmp_path, "x = 1\n")
-        assert engine._parse_response('{"rule_id": "X"}', pf) == []
+        with pytest.warns(UserWarning, match="not a list"):
+            assert engine._parse_response('{"rule_id": "X"}', pf) == []
+
+    def test_empty_raw_warns_and_returns_empty(self, tmp_path: Path):
+        """Empty LLM response now emits a warning so failures are visible."""
+        engine = _engine(tmp_path)
+        pf = _parsed(tmp_path, "x = 1\n")
+        with pytest.warns(UserWarning, match="empty response"):
+            assert engine._parse_response("", pf) == []
 
     def test_bad_severity_skipped_not_crashed(self, tmp_path: Path):
         """One malformed item should not abort the whole response."""

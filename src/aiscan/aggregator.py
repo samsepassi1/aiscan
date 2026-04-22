@@ -8,15 +8,46 @@ from aiscan.ast_layer import ParsedFile
 from aiscan.models import DetectionMethod, Finding, SEVERITY_ORDER
 
 
-SUPPRESS_COMMENT = re.compile(
-    r"(?:#|//|/\*)\s*aiscan:\s*suppress(?:\s+([^*]*?))?\s*(?:\*/)?$",
+# Per-language suppression comment patterns. Using a Python-style `#` in a JS
+# file (or `//` in a Python file) should NOT suppress findings — `#` is not a
+# comment in JS and `//` is integer division in Python.
+_SUPPRESS_PY = re.compile(r"#\s*aiscan:\s*suppress(?:\s+(.*))?$", re.IGNORECASE)
+# Two branches: `//` line-comment (any reason) and `/* */` block-comment
+# (reason must not contain `*` so it doesn't eat into the terminator).
+_SUPPRESS_CLIKE = re.compile(
+    r"(?:"
+    r"//\s*aiscan:\s*suppress(?:\s+(?P<line_reason>.*))?"
+    r"|"
+    r"/\*\s*aiscan:\s*suppress(?:\s+(?P<block_reason>[^*]*?))?\s*\*/"
+    r")\s*$",
     re.IGNORECASE,
 )
+_SUPPRESS_BY_LANG: dict[str, re.Pattern[str]] = {
+    "python": _SUPPRESS_PY,
+    "javascript": _SUPPRESS_CLIKE,
+    "typescript": _SUPPRESS_CLIKE,
+    "go": _SUPPRESS_CLIKE,
+    "java": _SUPPRESS_CLIKE,
+}
 
 
 def _dedup_key(finding: Finding) -> tuple:
     """Canonical key for deduplication: (rule_id, file_path, line_start)."""
     return (finding.rule_id, finding.file_path, finding.line_start)
+
+
+def _extract_reason(m: re.Match[str]) -> str:
+    """Extract the optional reason from a suppression-comment match.
+
+    Handles both the Python pattern (unnamed group 1) and the C-like pattern
+    (named `line_reason` and `block_reason` groups — exactly one populated).
+    """
+    groups = m.groupdict()
+    if groups:
+        reason = groups.get("line_reason") or groups.get("block_reason")
+    else:
+        reason = m.group(1) if m.lastindex else None
+    return (reason or "").strip()
 
 
 def merge(
@@ -36,13 +67,17 @@ def merge(
     suppression_reasons: dict[tuple[str, int], str] = {}
     if parsed_files:
         for pf in parsed_files:
+            pattern = _SUPPRESS_BY_LANG.get(pf.language)
+            if pattern is None:
+                continue  # language without known comment syntax — skip
             key = str(pf.path)
             suppression_index[key] = set()
             for line_no, line in enumerate(pf.lines, start=1):
-                m = SUPPRESS_COMMENT.search(line)
+                m = pattern.search(line)
                 if m:
                     suppression_index[key].add(line_no)
-                    reason = (m.group(1) or "").strip()
+                    # Python pattern: group 1. CLIKE pattern: named groups.
+                    reason = _extract_reason(m)
                     suppression_reasons[(key, line_no)] = reason
 
     merged: dict[tuple, Finding] = {}

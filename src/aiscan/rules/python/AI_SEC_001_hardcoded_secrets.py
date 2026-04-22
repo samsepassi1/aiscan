@@ -94,9 +94,10 @@ class HardcodedSecretsRule(BaseRule):
     def check(self, parsed: ParsedFile) -> list[Finding]:
         findings: list[Finding] = []
         try:
+            from tree_sitter import Query
             from tree_sitter_language_pack import get_language
             lang = get_language(parsed.language)  # type: ignore[arg-type]
-            query = lang.query(self._QUERY_SRC)  # type: ignore[attr-defined]
+            query = Query(lang, self._QUERY_SRC)  # type: ignore[arg-type]
             captures = query.captures(parsed.tree.root_node)  # type: ignore[attr-defined]
 
             # captures is a dict {capture_name: [nodes]} or list of (node, name) tuples

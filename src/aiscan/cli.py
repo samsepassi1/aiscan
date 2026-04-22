@@ -86,6 +86,13 @@ def main() -> None:
     metavar="PATH",
     help="Exclude a path (relative to TARGET) from scanning. Can be repeated.",
 )
+@click.option(
+    "--llm-scan-all",
+    is_flag=True,
+    default=False,
+    help="Run LLM analysis on every file, not just those with AST findings. "
+         "Higher coverage, higher cost.",
+)
 def scan(
     target: Path,
     llm: bool,
@@ -99,6 +106,7 @@ def scan(
     exit_code: bool,
     diff_only: bool,
     exclude: tuple[str, ...],
+    llm_scan_all: bool,
 ) -> None:
     """Scan TARGET path for AI-generated code vulnerabilities.
 
@@ -122,6 +130,7 @@ def scan(
         llm_base_url=llm_base_url,
         diff_only=diff_only,
         exclude=exclude,
+        llm_scan_all=llm_scan_all,
     )
 
     if output_format == "terminal":

@@ -29,11 +29,17 @@ def _finding(**kwargs) -> Finding:
     return Finding(**defaults)
 
 
-def _parsed_file(path: str, lines: list[str]) -> ParsedFile:
+_EXT_TO_LANG = {".py": "python", ".js": "javascript", ".jsx": "javascript",
+                ".ts": "typescript", ".tsx": "typescript", ".go": "go", ".java": "java"}
+
+
+def _parsed_file(path: str, lines: list[str], language: str | None = None) -> ParsedFile:
     mock_tree = MagicMock()
+    if language is None:
+        language = _EXT_TO_LANG.get(Path(path).suffix, "python")
     return ParsedFile(
         path=Path(path),
-        language="python",
+        language=language,
         source="\n".join(lines).encode(),
         tree=mock_tree,
         lines=lines,
@@ -158,6 +164,53 @@ class TestSuppressionByAggregator:
         result = merge([f], [], [pf])
         assert result[0].suppressed is True
         assert result[0].suppression_reason == ""
+
+    def test_python_slash_comment_does_not_suppress(self):
+        """// is not a Python comment; it's integer division. Must NOT suppress."""
+        f = _finding(file_path="src/app.py", line_start=1, line_end=1)
+        pf = _parsed_file("src/app.py", [
+            "x = a // aiscan: suppress",  # integer division, not a comment
+        ])
+        result = merge([f], [], [pf])
+        assert result[0].suppressed is False
+
+    def test_js_hash_does_not_suppress(self):
+        """# is not a JS/TS line comment; must NOT suppress in JS files."""
+        f = _finding(file_path="src/app.js", line_start=1, line_end=1)
+        pf = _parsed_file("src/app.js", [
+            "const pattern = '# aiscan: suppress';",  # # inside a string
+        ])
+        result = merge([f], [], [pf])
+        assert result[0].suppressed is False
+
+    def test_typescript_line_comment_suppression(self):
+        f = _finding(file_path="src/app.ts", line_start=1, line_end=1)
+        pf = _parsed_file("src/app.ts", [
+            "const x: string = y; // aiscan: suppress typed-already",
+        ])
+        result = merge([f], [], [pf])
+        assert result[0].suppressed is True
+        assert "typed-already" in result[0].suppression_reason
+
+    def test_js_line_comment_allows_asterisk_in_reason(self):
+        """// comments should allow any reason text, including asterisks."""
+        f = _finding(file_path="src/app.js", line_start=1, line_end=1)
+        pf = _parsed_file("src/app.js", [
+            "const k = v; // aiscan: suppress has *star* in reason",
+        ])
+        result = merge([f], [], [pf])
+        assert result[0].suppressed is True
+        assert "*star*" in result[0].suppression_reason
+
+    def test_unknown_language_skips_suppression_safely(self):
+        """A language not in _SUPPRESS_BY_LANG should return findings, not crash."""
+        f = _finding(file_path="src/app.rb", line_start=1, line_end=1)
+        pf = _parsed_file("src/app.rb", [
+            "# aiscan: suppress this works in ruby but rule is not wired",
+        ], language="ruby")
+        result = merge([f], [], [pf])
+        assert len(result) == 1
+        assert result[0].suppressed is False
 
 
 class TestSortOrder:
