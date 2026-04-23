@@ -18,10 +18,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    # Pinned: tree-sitter 0.23 ABI changed; language-pack 1.7+ has no
-    # cp312 wheels on some indexes. These bounds are known-good.
-    "tree-sitter>=0.23,<0.26",
-    "tree-sitter-language-pack>=0.7,<1.7",
+    "tree-sitter>=0.23",
+    "tree-sitter-language-pack>=0.7",
     "pyyaml>=6.0",
     "click>=8.1",
     "rich>=13.0",
