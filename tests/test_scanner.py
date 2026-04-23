@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -14,20 +15,28 @@ _SECRET_LINE = "password = 'aBcDeFgHiJkLmNoPqRsTuVwXyZ123456'\n"
 
 
 def _git(cwd: Path, *args: str) -> None:
-    """Run a git command in cwd, failing the test on non-zero exit."""
+    """Run a git command in cwd, failing the test on non-zero exit.
+
+    Inherits the parent env (so locale/PATH/etc. work on any CI) but
+    overrides HOME to isolate from the user's global gitconfig and sets
+    author/committer identity so `git commit` doesn't prompt.
+    """
+    env = dict(os.environ)
+    env.update({
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.com",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.com",
+        "HOME": str(cwd),  # isolates from global ~/.gitconfig
+        "GIT_CONFIG_GLOBAL": "/dev/null",  # belt & braces for newer git
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+    })
     subprocess.run(
         ["git", *args],
         cwd=cwd,
         check=True,
         capture_output=True,
-        env={
-            "GIT_AUTHOR_NAME": "test",
-            "GIT_AUTHOR_EMAIL": "test@example.com",
-            "GIT_COMMITTER_NAME": "test",
-            "GIT_COMMITTER_EMAIL": "test@example.com",
-            "PATH": "/usr/bin:/bin:/usr/local/bin",
-            "HOME": str(cwd),
-        },
+        env=env,
     )
 
 
