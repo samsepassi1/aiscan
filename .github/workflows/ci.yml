@@ -30,25 +30,23 @@ jobs:
       - name: Show installed packages
         continue-on-error: true
         run: |
-          {
-            echo "### Python"
-            python --version
-            echo
-            echo "### sys.path"
-            python -c "import sys; [print(p) for p in sys.path]"
-            echo
-            echo "### pip list"
-            python -m pip list
-            echo
-            echo "### tree_sitter import"
-            python -c "import tree_sitter; print('ok:', getattr(tree_sitter, '__version__', 'no __version__'))" 2>&1
-            echo
-            echo "### tree_sitter_language_pack import"
-            python -c "import tree_sitter_language_pack; print('ok')" 2>&1
-            echo
-            echo "### tree_sitter_language_pack install info"
-            python -m pip show tree-sitter-language-pack 2>&1
-          } | tee -a $GITHUB_STEP_SUMMARY
+          python --version > diag.txt
+          echo "--- pip list ---" >> diag.txt
+          python -m pip list >> diag.txt 2>&1
+          echo "--- tree_sitter_language_pack info ---" >> diag.txt
+          python -m pip show tree-sitter-language-pack >> diag.txt 2>&1 || echo "pip show failed" >> diag.txt
+          echo "--- import attempts ---" >> diag.txt
+          python -c "import tree_sitter; print('tree_sitter:', getattr(tree_sitter, '__version__', '?'))" >> diag.txt 2>&1 || echo "tree_sitter FAILED" >> diag.txt
+          python -c "import tree_sitter_language_pack; print('tree_sitter_language_pack: ok')" >> diag.txt 2>&1 || echo "tree_sitter_language_pack FAILED" >> diag.txt
+          cat diag.txt
+
+      - name: Upload diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diag-py${{ matrix.python-version }}
+          path: diag.txt
+          if-no-files-found: ignore
 
       - name: Lint with ruff
         run: ruff check src/ tests/
