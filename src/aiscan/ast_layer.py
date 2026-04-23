@@ -114,10 +114,15 @@ class ASTLayer:
                 continue
             if p.suffix.lower() not in exts:
                 continue
-            # Skip hidden dirs and known non-source dirs
+            # Only inspect components UNDER target, so the path prefix (e.g.
+            # a repo under ~/.workspaces/) doesn't accidentally match.
+            try:
+                rel_parts = p.relative_to(target).parts
+            except ValueError:
+                rel_parts = p.parts
             if any(
                 part.startswith(".") or part in SKIP_DIRS
-                for part in p.parts
+                for part in rel_parts
             ):
                 continue
             results.append(p)

@@ -46,3 +46,28 @@ class TestASTLayer:
         snippet = parsed.get_snippet(1, 3)
         assert isinstance(snippet, str)
         assert len(snippet) > 0
+
+    def test_hidden_prefix_in_target_path_does_not_skip_files(
+        self, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        """A target under a dotted parent dir (e.g. ~/.workspaces/repo) must still scan its files."""
+        dotted = tmp_path / ".workspaces"
+        dotted.mkdir()
+        repo = dotted / "myrepo"
+        repo.mkdir()
+        (repo / "app.py").write_text("x = 1\n")
+        files = ast_layer.collect_files(repo)
+        assert any(f.name == "app.py" for f in files), \
+            "File under a dotted-parent path was incorrectly skipped"
+
+    def test_hidden_dir_inside_target_still_skipped(
+        self, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        """A .git or .venv INSIDE target still gets skipped."""
+        hidden = tmp_path / ".venv"
+        hidden.mkdir()
+        (hidden / "lib.py").write_text("x = 1\n")
+        (tmp_path / "real.py").write_text("x = 1\n")
+        files = ast_layer.collect_files(tmp_path)
+        assert all(".venv" not in str(f) for f in files)
+        assert any(f.name == "real.py" for f in files)

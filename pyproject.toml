@@ -16,6 +16,8 @@ keywords = ["security", "scanner", "ai", "llm", "appsec", "sast"]
 classifiers = [
     "Topic :: Security",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "tree-sitter>=0.23",

@@ -79,6 +79,12 @@ All notable changes to aiscan are documented here. This project follows
 ### Dependencies
 - Added `platformdirs>=4.0` for platform-appropriate user cache
   directory resolution.
+- Excluded `tree-sitter-language-pack==1.6.3` via `!=1.6.3` constraint.
+  This release publishes a wheel that installs dist-info metadata but
+  omits the `tree_sitter_language_pack/` module directory, so `pip show`
+  reports "installed" while `import tree_sitter_language_pack` raises
+  `ModuleNotFoundError`. Affected Python 3.12 in CI (3.11's resolver
+  picked 1.6.2 which is fine).
 
 ### Fixed
 - LLM engine Anthropic response handling iterates content blocks to find
