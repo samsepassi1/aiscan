@@ -8,9 +8,16 @@ import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 
+from platformdirs import user_cache_dir
+
 from aiscan.ast_layer import ASTLayer, ParsedFile
 from aiscan.models import Finding, ScanResult
 from aiscan.rule_engine import RuleEngine
+
+
+def default_cache_dir() -> str:
+    """Platform-appropriate cache directory for aiscan (user-level)."""
+    return user_cache_dir("aiscan")
 
 
 class Scanner:
@@ -32,7 +39,9 @@ class Scanner:
         diff_only: bool = False,
         exclude: tuple[str, ...] = (),
         llm_scan_all: bool = False,
-        cache_dir: str = ".aiscan_cache",
+        llm_max_lines: int = 500,
+        llm_timeout: float = 60.0,
+        cache_dir: str | None = None,
     ) -> None:
         self.llm_enabled = llm_enabled
         self.llm_provider = llm_provider
@@ -40,6 +49,7 @@ class Scanner:
         self.diff_only = diff_only
         self.exclude = exclude
         self.llm_scan_all = llm_scan_all
+        self.llm_max_lines = llm_max_lines
 
         self._ast_layer = ASTLayer()
         self._rule_engine = RuleEngine()
@@ -52,7 +62,8 @@ class Scanner:
                 model=llm_model,
                 api_key=llm_api_key,
                 base_url=llm_base_url,
-                cache_dir=cache_dir,
+                cache_dir=cache_dir or default_cache_dir(),
+                timeout=llm_timeout,
             )
 
     def _get_diff_files(self, target: Path) -> list[Path]:
@@ -139,7 +150,11 @@ class Scanner:
                     continue
                 try:
                     llm_findings.extend(
-                        self._llm_engine.analyze(pf, context_findings=file_ast or [])
+                        self._llm_engine.analyze(
+                            pf,
+                            max_lines=self.llm_max_lines,
+                            context_findings=file_ast or [],
+                        )
                     )
                 except Exception as exc:
                     warnings.warn(

@@ -53,6 +53,12 @@ aiscan scan . --diff-only --exit-code
 
 # LLM reviews every file, not just those with AST findings (deeper, costlier)
 aiscan scan . --llm --llm-scan-all
+
+# Configure LLM request timeout and per-file line budget
+aiscan scan . --llm --llm-timeout 90 --llm-max-lines 800
+
+# Override the LLM response cache location (default: platform user cache dir)
+aiscan scan . --llm --cache-dir ./.aiscan_cache
 ```
 
 ## Inline Suppression

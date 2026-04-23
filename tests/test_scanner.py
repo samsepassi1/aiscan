@@ -186,3 +186,41 @@ class TestLLMScanAll:
             if c.kwargs.get("context_findings")
         ]
         assert len(calls_with_context) >= 1
+
+
+class TestLLMMaxLines:
+    def test_max_lines_passed_to_engine(self, tmp_path: Path):
+        (tmp_path / "secret.py").write_text(_SECRET_LINE)
+        scanner = Scanner(
+            llm_enabled=True,
+            llm_provider="anthropic",
+            llm_api_key="dummy",
+            llm_max_lines=42,
+            cache_dir=str(tmp_path / "cache"),
+        )
+        mock_llm = MagicMock()
+        mock_llm.analyze.return_value = []
+        scanner._llm_engine = mock_llm
+        scanner.scan(tmp_path)
+        _, kwargs = mock_llm.analyze.call_args
+        assert kwargs["max_lines"] == 42
+
+
+class TestCacheDirDefault:
+    def test_default_cache_dir_is_platform_user_cache(self):
+        """Without explicit cache_dir the Scanner uses platformdirs.user_cache_dir('aiscan')."""
+        from aiscan.scanner import default_cache_dir
+        from platformdirs import user_cache_dir
+        assert default_cache_dir() == user_cache_dir("aiscan")
+
+    def test_explicit_cache_dir_overrides_default(self, tmp_path: Path):
+        custom = tmp_path / "custom_cache"
+        Scanner(
+            llm_enabled=True,
+            llm_provider="anthropic",
+            llm_api_key="dummy",
+            cache_dir=str(custom),
+        )
+        # The engine's cache is constructed with the custom dir; verify the
+        # DiskCache was pointed at our custom path (diskcache makes the dir).
+        assert custom.exists()

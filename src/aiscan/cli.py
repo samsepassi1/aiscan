@@ -93,6 +93,32 @@ def main() -> None:
     help="Run LLM analysis on every file, not just those with AST findings. "
          "Higher coverage, higher cost.",
 )
+@click.option(
+    "--llm-max-lines",
+    default=500,
+    type=int,
+    show_default=True,
+    metavar="N",
+    help="Maximum number of lines of a file to send to the LLM. "
+         "Larger files are truncated and a warning is emitted.",
+)
+@click.option(
+    "--llm-timeout",
+    default=60.0,
+    type=float,
+    show_default=True,
+    metavar="SECONDS",
+    help="Timeout for each LLM API call.",
+)
+@click.option(
+    "--cache-dir",
+    default=None,
+    type=click.Path(path_type=Path),
+    metavar="PATH",
+    help="Directory for the LLM response cache. Defaults to a platform-"
+         "appropriate user cache dir (e.g. ~/Library/Caches/aiscan on macOS, "
+         "~/.cache/aiscan on Linux).",
+)
 def scan(
     target: Path,
     llm: bool,
@@ -107,6 +133,9 @@ def scan(
     diff_only: bool,
     exclude: tuple[str, ...],
     llm_scan_all: bool,
+    llm_max_lines: int,
+    llm_timeout: float,
+    cache_dir: Path | None,
 ) -> None:
     """Scan TARGET path for AI-generated code vulnerabilities.
 
@@ -131,6 +160,9 @@ def scan(
         diff_only=diff_only,
         exclude=exclude,
         llm_scan_all=llm_scan_all,
+        llm_max_lines=llm_max_lines,
+        llm_timeout=llm_timeout,
+        cache_dir=str(cache_dir) if cache_dir else None,
     )
 
     if output_format == "terminal":

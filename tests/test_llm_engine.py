@@ -346,3 +346,38 @@ class TestProviderWiring:
         engine = LLMEngine(provider="unknown", cache_dir=str(tmp_path / "cache"))
         with pytest.raises(ValueError, match="Unknown LLM provider"):
             engine._get_client()
+
+
+class TestTimeout:
+    def test_timeout_passed_to_anthropic(self, tmp_path: Path):
+        engine = LLMEngine(
+            provider="anthropic",
+            model="test",
+            cache_dir=str(tmp_path / "cache"),
+            timeout=12.5,
+        )
+        mock_anthropic = MagicMock()
+        with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
+            engine._client = None
+            engine._get_client()
+            kwargs = mock_anthropic.Anthropic.call_args[1]
+            assert kwargs["timeout"] == 12.5
+
+    def test_timeout_passed_to_openai(self, tmp_path: Path):
+        engine = LLMEngine(
+            provider="openai",
+            model="test",
+            cache_dir=str(tmp_path / "cache"),
+            timeout=30.0,
+        )
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
+            engine._client = None
+            engine._get_client()
+            kwargs = mock_openai.OpenAI.call_args[1]
+            assert kwargs["timeout"] == 30.0
+
+    def test_default_timeout_is_set(self, tmp_path: Path):
+        """Default timeout should be present so requests cannot hang forever."""
+        engine = LLMEngine(provider="anthropic", cache_dir=str(tmp_path / "cache"))
+        assert engine._timeout == 60.0

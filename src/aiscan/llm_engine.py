@@ -50,11 +50,13 @@ class LLMEngine:
         api_key: str | None = None,
         base_url: str | None = None,
         cache_dir: str = ".aiscan_cache",
+        timeout: float = 60.0,
     ) -> None:
         self.provider = provider
         self.model = model
         self._api_key = api_key
         self._base_url = base_url
+        self._timeout = timeout
         self._client: Any = None
 
         # Zero-egress enforcement: local provider must not have an external API key
@@ -73,7 +75,7 @@ class LLMEngine:
 
         if self.provider in ("openai", "local"):
             import openai
-            kwargs: dict[str, Any] = {}
+            kwargs: dict[str, Any] = {"timeout": self._timeout}
             if self._api_key:
                 kwargs["api_key"] = self._api_key
             if self._base_url:
@@ -85,7 +87,10 @@ class LLMEngine:
 
         elif self.provider == "anthropic":
             import anthropic
-            self._client = anthropic.Anthropic(api_key=self._api_key)
+            self._client = anthropic.Anthropic(
+                api_key=self._api_key,
+                timeout=self._timeout,
+            )
 
         else:
             raise ValueError(f"Unknown LLM provider: {self.provider!r}. Choose: anthropic, openai, local")

@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tree_sitter_language_pack import get_parser
+
+if TYPE_CHECKING:
+    from tree_sitter import Node, Parser, Tree
 
 
 LANGUAGE_MAP: dict[str, str] = {
@@ -41,13 +45,13 @@ class ParsedFile:
     path: Path
     language: str
     source: bytes
-    tree: object  # tree_sitter.Tree — typed as object to avoid hard import
+    tree: "Tree"
     lines: list[str] = field(default_factory=list)
 
-    def get_node_text(self, node: object) -> str:
+    def get_node_text(self, node: "Node") -> str:
         """Extract source text for a given tree-sitter node."""
         # node.start_byte and node.end_byte are byte offsets into self.source
-        return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")  # type: ignore[attr-defined]
+        return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
 
     def get_line(self, line_number: int) -> str:
         """Return the source line at 1-based line_number, or '' if out of range."""
@@ -67,9 +71,9 @@ class ASTLayer:
     """Manages tree-sitter parsers and parses source files into ParsedFile objects."""
 
     def __init__(self) -> None:
-        self._parsers: dict[str, object] = {}
+        self._parsers: dict[str, "Parser"] = {}
 
-    def _get_parser(self, language: str) -> object:
+    def _get_parser(self, language: str) -> "Parser":
         if language not in self._parsers:
             self._parsers[language] = get_parser(language)  # type: ignore[arg-type]
         return self._parsers[language]
@@ -85,7 +89,7 @@ class ASTLayer:
         except (OSError, PermissionError):
             return None
         parser = self._get_parser(language)
-        tree = parser.parse(source)  # type: ignore[attr-defined]
+        tree = parser.parse(source)
         lines = source.decode("utf-8", errors="replace").splitlines()
         return ParsedFile(
             path=path,

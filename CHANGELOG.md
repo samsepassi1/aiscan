@@ -18,6 +18,18 @@ All notable changes to aiscan are documented here. This project follows
 - `--llm-scan-all` flag: run LLM analysis on every file, not just those
   with AST findings. Higher coverage, higher cost. Useful for small
   repos or exploratory review.
+- `--llm-max-lines N` flag: configure the per-file line budget sent to
+  the LLM (default 500). Larger files are truncated and a warning is
+  emitted.
+- `--llm-timeout SECONDS` flag: per-request timeout for LLM calls
+  (default 60s). Prevents hung requests from blocking a scan forever.
+  Passed through to both the Anthropic and OpenAI SDK clients.
+- `--cache-dir PATH` flag: override the LLM response cache location.
+  Default is now a platform-appropriate user cache dir (via
+  `platformdirs.user_cache_dir("aiscan")`) — `~/Library/Caches/aiscan`
+  on macOS, `~/.cache/aiscan` on Linux, `%LOCALAPPDATA%\aiscan\Cache`
+  on Windows. Previously defaulted to `.aiscan_cache/` in the current
+  working directory, which littered user repos.
 - `--exclude PATH` (repeatable) to skip subdirectories from scanning.
 - Context-aware LLM analysis: the LLM tier now receives AST findings for
   the same file as context and is instructed to find *additional* issues
@@ -58,6 +70,15 @@ All notable changes to aiscan are documented here. This project follows
 - `Scanner._get_diff_files` handles fresh repos (no HEAD commit yet)
   gracefully instead of falling back to a full scan with a confusing
   warning.
+- `ast_layer.py` is properly typed via `TYPE_CHECKING: from tree_sitter
+  import Tree, Node, Parser`. Removed redundant
+  `# type: ignore[attr-defined]` comments from `ParsedFile.get_node_text`,
+  `ASTLayer._get_parser`, `ASTLayer.parse_file`, and the capture-pair
+  handling in `AI-SEC-001`.
+
+### Dependencies
+- Added `platformdirs>=4.0` for platform-appropriate user cache
+  directory resolution.
 
 ### Fixed
 - LLM engine Anthropic response handling iterates content blocks to find
