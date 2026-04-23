@@ -28,11 +28,27 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Show installed packages
+        continue-on-error: true
         run: |
-          python --version
-          python -m pip list
-          python -c "import tree_sitter; print('tree_sitter:', tree_sitter.__version__ if hasattr(tree_sitter, '__version__') else 'imported')"
-          python -c "import tree_sitter_language_pack as p; print('tree_sitter_language_pack: imported ok')"
+          {
+            echo "### Python"
+            python --version
+            echo
+            echo "### sys.path"
+            python -c "import sys; [print(p) for p in sys.path]"
+            echo
+            echo "### pip list"
+            python -m pip list
+            echo
+            echo "### tree_sitter import"
+            python -c "import tree_sitter; print('ok:', getattr(tree_sitter, '__version__', 'no __version__'))" 2>&1
+            echo
+            echo "### tree_sitter_language_pack import"
+            python -c "import tree_sitter_language_pack; print('ok')" 2>&1
+            echo
+            echo "### tree_sitter_language_pack install info"
+            python -m pip show tree-sitter-language-pack 2>&1
+          } | tee -a $GITHUB_STEP_SUMMARY
 
       - name: Lint with ruff
         run: ruff check src/ tests/
