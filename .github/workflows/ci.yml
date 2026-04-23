@@ -27,26 +27,17 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
-      - name: Show installed packages
+      - name: Diag — pip list (via annotations)
         continue-on-error: true
         run: |
-          python --version > diag.txt
-          echo "--- pip list ---" >> diag.txt
-          python -m pip list >> diag.txt 2>&1
-          echo "--- tree_sitter_language_pack info ---" >> diag.txt
-          python -m pip show tree-sitter-language-pack >> diag.txt 2>&1 || echo "pip show failed" >> diag.txt
-          echo "--- import attempts ---" >> diag.txt
-          python -c "import tree_sitter; print('tree_sitter:', getattr(tree_sitter, '__version__', '?'))" >> diag.txt 2>&1 || echo "tree_sitter FAILED" >> diag.txt
-          python -c "import tree_sitter_language_pack; print('tree_sitter_language_pack: ok')" >> diag.txt 2>&1 || echo "tree_sitter_language_pack FAILED" >> diag.txt
-          cat diag.txt
-
-      - name: Upload diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: diag-py${{ matrix.python-version }}
-          path: diag.txt
-          if-no-files-found: ignore
+          emit() { echo "::error file=diag,line=1::$1"; }
+          emit "py=$(python --version 2>&1)"
+          emit "tsl-version=$(python -m pip show tree-sitter-language-pack 2>&1 | grep -E '^Version' || echo NONE)"
+          emit "tsl-location=$(python -m pip show tree-sitter-language-pack 2>&1 | grep -E '^Location' || echo NONE)"
+          emit "ts-import=$(python -c 'import tree_sitter; print(getattr(tree_sitter, "__version__", "ok"))' 2>&1 | head -1)"
+          emit "tsl-import=$(python -c 'import tree_sitter_language_pack; print("ok")' 2>&1 | head -1)"
+          emit "sitepkgs=$(python -c 'import site; print(site.getsitepackages()[0])' 2>&1)"
+          emit "lscache=$(ls $(python -c 'import site; print(site.getsitepackages()[0])') 2>&1 | grep -i tree || echo NONE)"
 
       - name: Lint with ruff
         run: ruff check src/ tests/
