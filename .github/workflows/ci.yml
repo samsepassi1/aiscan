@@ -27,28 +27,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
-      - name: Diag — full import traceback
-        continue-on-error: true
-        run: |
-          emit() { echo "::error file=diag,line=1::$1"; }
-          emit "PY=$(python --version 2>&1)"
-          emit "PIP-TS=$(python -m pip show tree-sitter 2>&1 | grep -E '^Version' || echo NONE)"
-          emit "PIP-TSL=$(python -m pip show tree-sitter-language-pack 2>&1 | grep -E '^Version' || echo NONE)"
-          # Get the full import traceback as a single variable, then emit each line
-          TRACEBACK=$(python -c 'import tree_sitter_language_pack' 2>&1 || true)
-          # Emit each line of the traceback as a separate annotation (numbered)
-          n=0
-          while IFS= read -r line; do
-            n=$((n+1))
-            emit "TB[$n]=$line"
-          done <<< "$TRACEBACK"
-          # Also list tree-sitter packages in site-packages
-          SITE=$(python -c 'import site; print(site.getsitepackages()[0])')
-          emit "SITE=$SITE"
-          ls "$SITE" | grep -i tree | while IFS= read -r line; do
-            emit "LS=$line"
-          done
-
       - name: Lint with ruff
         run: ruff check src/ tests/
 
