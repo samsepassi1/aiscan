@@ -231,3 +231,76 @@ def rules() -> None:
         )
 
     console.print(table)
+
+
+@main.command()
+@click.argument("target", default=".", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--severity",
+    default="LOW",
+    show_default=True,
+    type=click.Choice(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]),
+    help="Minimum severity to include in the attribution report.",
+)
+@click.option(
+    "--format",
+    "output_format",
+    default="terminal",
+    show_default=True,
+    type=click.Choice(["terminal", "json"]),
+    help="Output format.",
+)
+@click.option(
+    "--output",
+    "-o",
+    default=None,
+    type=click.Path(path_type=Path),
+    help="Write output to file (implies --format json if not specified).",
+)
+@click.option("--diff-only", is_flag=True, default=False, help="Scan only git-changed files.")
+@click.option("--exclude", multiple=True, metavar="PATH", help="Path(s) to exclude from scanning.")
+def metrics(
+    target: Path,
+    severity: str,
+    output_format: str,
+    output: Path | None,
+    diff_only: bool,
+    exclude: tuple[str, ...],
+) -> None:
+    """Attribute findings to commits and report AI vs. human defect rates.
+
+    Runs a scan, then uses git blame to map each finding's line to the
+    commit that last touched it. Commits are classified as AI-generated
+    (via Co-Authored-By trailers, message-body markers, or author email)
+    or human, and aggregated into an AI / human / unknown breakdown.
+    """
+    from aiscan.blame import BlameError
+    from aiscan.metrics import compute_metrics
+    from aiscan import reporter
+
+    # If the user asked to write a file, JSON is the only format that makes
+    # sense — terminal output is Rich markup, not a portable artifact.
+    effective_format = "json" if output and output_format == "terminal" else output_format
+
+    if effective_format == "terminal":
+        console.print(f"[dim]Running metrics on [bold]{target}[/bold]...[/dim]")
+
+    try:
+        result = compute_metrics(
+            target,
+            diff_only=diff_only,
+            exclude=exclude,
+            min_severity=severity,
+        )
+    except BlameError as exc:
+        raise click.ClickException(str(exc))
+
+    if effective_format == "terminal":
+        reporter.write_metrics_terminal(result, console=console)
+    else:
+        json_str = reporter.write_metrics_json(result, path=output)
+        if not output:
+            click.echo(json_str)
+
+    if output:
+        console.print(f"[green]Metrics written to {output}[/green]")

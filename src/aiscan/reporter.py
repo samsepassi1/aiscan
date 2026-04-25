@@ -12,6 +12,7 @@ from rich.table import Table
 from rich import box
 from rich.text import Text
 
+from aiscan.metrics import MetricsResult
 from aiscan.models import Finding, ScanResult, Severity
 
 
@@ -210,3 +211,95 @@ def write_terminal(result: ScanResult, console: Console | None = None) -> None:
     if suppressed:
         con.print(f"  [dim]{len(suppressed)} finding(s) suppressed[/dim]")
     con.print()
+
+
+# Display style for each attribution origin.
+_ORIGIN_STYLE = {
+    "ai": "magenta",
+    "human": "cyan",
+    "unknown": "dim",
+}
+
+
+def write_metrics_terminal(result: MetricsResult, console: Console | None = None) -> None:
+    """Print an AI-vs-human finding-attribution report to the terminal."""
+    con = console or Console()
+
+    con.print()
+    con.rule("[bold]aiscan[/bold] — metrics")
+    con.print(
+        f"  Target: [bold]{result.target_path}[/bold]  |  "
+        f"Findings: {result.total_findings}  |  "
+        f"Scan: {result.scan_duration_seconds:.2f}s  |  "
+        f"Blame: {result.blame_duration_seconds:.2f}s"
+    )
+    con.print()
+
+    if result.total_findings == 0:
+        con.print("[bold green]No findings — nothing to attribute.[/bold green]")
+        con.print()
+        return
+
+    # Bucket totals table
+    totals = Table(
+        show_header=True,
+        header_style="bold",
+        box=box.ROUNDED,
+        title="Findings by origin",
+    )
+    totals.add_column("Origin", style="bold", width=10)
+    totals.add_column("Count", justify="right", width=6)
+    totals.add_column("%", justify="right", width=6)
+    for sev in [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO]:
+        totals.add_column(sev.value.title()[:4], justify="right", width=5)
+
+    total = max(result.total_findings, 1)
+    for origin in ("ai", "human", "unknown"):
+        bucket = result.buckets[origin]
+        pct = 100.0 * bucket.count / total
+        style = _ORIGIN_STYLE[origin]
+        totals.add_row(
+            Text(origin.upper(), style=style),
+            str(bucket.count),
+            f"{pct:.0f}%",
+            *[
+                str(bucket.by_severity.get(sev.value, 0))
+                for sev in [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO]
+            ],
+        )
+    con.print(totals)
+
+    # Rule breakdown per non-empty bucket
+    for origin in ("ai", "human", "unknown"):
+        bucket = result.buckets[origin]
+        if not bucket.by_rule:
+            continue
+        rule_table = Table(
+            show_header=True,
+            header_style="bold",
+            box=box.SIMPLE,
+            title=f"{origin.upper()} findings by rule",
+        )
+        rule_table.add_column("Rule ID", width=14)
+        rule_table.add_column("Count", justify="right", width=6)
+        for rule_id, count in sorted(bucket.by_rule.items(), key=lambda kv: -kv[1]):
+            rule_table.add_row(rule_id, str(count))
+        con.print(rule_table)
+
+    # Unknown sub-reason breakdown
+    if result.buckets["unknown"].count:
+        reasons: dict[str, int] = {}
+        for af in result.annotated:
+            if af.attribution.origin.value == "unknown":
+                reasons[af.attribution.reason] = reasons.get(af.attribution.reason, 0) + 1
+        summary = "  ".join(f"{k}={v}" for k, v in sorted(reasons.items()))
+        con.print(f"  [dim]Unknown reasons: {summary}[/dim]")
+    con.print()
+
+
+def write_metrics_json(result: MetricsResult, path: Path | None = None) -> str:
+    """Serialize a MetricsResult to JSON using Pydantic's serializer."""
+    json_str = result.model_dump_json(indent=2)
+    if path:
+        path.write_text(json_str)
+    return json_str

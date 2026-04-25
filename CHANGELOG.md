@@ -7,6 +7,17 @@ All notable changes to aiscan are documented here. This project follows
 ## [Unreleased]
 
 ### Added
+- `aiscan metrics` subcommand: runs a scan, then uses `git blame` to map
+  each finding to the commit that last touched its line and classifies
+  that commit as AI-generated or human via `Co-Authored-By` trailers,
+  commit-message markers (`Generated with [Claude Code]`, robot-emoji
+  generation markers, Cursor/Copilot attribution lines), and author
+  email domains. Aggregates findings into `ai`/`human`/`unknown` buckets
+  with severity and per-rule breakdowns. Terminal (Rich) and JSON
+  output. Recognizes Claude, Copilot, Cursor, ChatGPT, Gemini, Devin,
+  and aider. LLM tier is disabled for this command so it runs free in
+  CI. Suppressed findings are excluded from buckets; uncommitted lines
+  are attributed to `unknown` with reason `uncommitted`.
 - `//` and `/* */` suppression comment syntax for JavaScript/TypeScript
   (`// aiscan: suppress <reason>`). Previously only `# aiscan: suppress`
   worked, which meant JS/TS files could not suppress findings.

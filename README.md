@@ -87,6 +87,44 @@ Suppression is **language-aware**: `#` is recognized only in Python, and
 `//` in a Python file is integer division, not a comment, and will not
 suppress anything — and the same applies to `#` in a JS/TS file.
 
+## Metrics — AI vs. human defect rates
+
+`aiscan metrics` runs a scan, uses `git blame` to map each finding to the
+commit that last touched it, and classifies that commit as AI-generated
+or human based on `Co-Authored-By` trailers, commit-message markers
+(e.g. `Generated with [Claude Code]`), and author email domains. Findings
+are aggregated into `ai` / `human` / `unknown` buckets with severity and
+rule breakdowns.
+
+```bash
+# Terminal report on the whole repo
+aiscan metrics . --severity HIGH
+
+# JSON output for dashboards / CI
+aiscan metrics . --format json --output metrics.json
+
+# Only attribute findings in currently-changed files
+aiscan metrics . --diff-only
+```
+
+Recognized AI agents: Claude, Copilot, Cursor, ChatGPT, Gemini, Devin,
+aider. The LLM tier is disabled for `metrics` so it's free to run in CI.
+Suppressed findings are excluded from buckets. Lines that are uncommitted
+(staged or modified) are attributed to `unknown` with reason `uncommitted`.
+
+Sample output:
+
+```
+                           Findings by origin
+╭────────────┬────────┬────────┬───────┬───────┬───────┬───────┬───────╮
+│ Origin     │  Count │      % │  Crit │  High │  Medi │   Low │  Info │
+├────────────┼────────┼────────┼───────┼───────┼───────┼───────┼───────┤
+│ AI         │     30 │    60% │    18 │    12 │     0 │     0 │     0 │
+│ HUMAN      │     20 │    40% │     7 │    13 │     0 │     0 │     0 │
+│ UNKNOWN    │      0 │     0% │     0 │     0 │     0 │     0 │     0 │
+╰────────────┴────────┴────────┴───────┴───────┴───────┴───────┴───────╯
+```
+
 ## Detection Rules
 
 | Rule ID | Name | Severity | CWE |
