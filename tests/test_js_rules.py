@@ -287,6 +287,24 @@ class TestJSRules:
         assert sec002[0].confidence < 0.80
         assert "Auth library" in sec002[0].message
 
+    def test_detects_prompt_injection_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, vulnerable_dir / "prompt_injection_test.js")
+        sec018 = [f for f in findings if f.rule_id == "AI-SEC-018"]
+        # Template literal, concatenation, and OpenAI system-role entry.
+        assert len(sec018) >= 3, f"expected 3+ AI-SEC-018 findings, got {len(sec018)}"
+        for f in sec018:
+            assert f.severity == Severity.HIGH
+            assert "CWE-94" in f.cwe_ids
+
+    def test_no_false_positives_prompt_injection_safe_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, safe_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, safe_dir / "prompt_injection_safe.js")
+        sec018 = [f for f in findings if f.rule_id == "AI-SEC-018"]
+        assert len(sec018) == 0, f"False positive in prompt_injection_safe.js: {sec018}"
+
     def test_req_session_non_auth_not_suppressed_js(
         self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
     ):

@@ -31,6 +31,8 @@ class RuleEngine:
         from aiscan.rules.javascript.AI_SEC_015_ssrf_ssr_fetch import SSRFInServerFetchRule
         from aiscan.rules.javascript.AI_SEC_016_insecure_cookie import InsecureCookieRule
         from aiscan.rules.javascript.AI_SEC_017_weak_csp import WeakCSPRule
+        from aiscan.rules.python.AI_SEC_018_prompt_injection import PromptInjectionRule
+        from aiscan.rules.javascript.AI_SEC_018_prompt_injection_js import PromptInjectionJSRule
         from aiscan.rules.common.AI_SEC_011_path_traversal import PathTraversalRule
 
         self.rules = [
@@ -48,6 +50,8 @@ class RuleEngine:
             SSRFInServerFetchRule(),
             InsecureCookieRule(),
             WeakCSPRule(),
+            PromptInjectionRule(),
+            PromptInjectionJSRule(),
             PathTraversalRule(),
         ]
 

@@ -72,6 +72,22 @@ class TestRuleEngine:
         sec004 = [f for f in findings if f.rule_id == "AI-SEC-004"]
         assert len(sec004) == 0, f"False positive in random_safe.py: {sec004}"
 
+    def test_detects_prompt_injection_python(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, vulnerable_dir / "prompt_injection_test.py")
+        sec018 = [f for f in findings if f.rule_id == "AI-SEC-018"]
+        # Fixture has four vulnerable patterns: f-string, concat, .format(),
+        # OpenAI system-role dict.
+        assert len(sec018) >= 4, f"expected 4+ AI-SEC-018 findings, got {len(sec018)}"
+
+    def test_no_false_positives_prompt_injection_safe_python(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, safe_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, safe_dir / "prompt_injection_safe.py")
+        sec018 = [f for f in findings if f.rule_id == "AI-SEC-018"]
+        assert len(sec018) == 0, f"False positive in prompt_injection_safe.py: {sec018}"
+
     def test_finding_has_required_fields(
         self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path
     ):

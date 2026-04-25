@@ -7,6 +7,18 @@ All notable changes to aiscan are documented here. This project follows
 ## [Unreleased]
 
 ### Added
+- `AI-SEC-018` Prompt Injection via Untrusted Input (Python +
+  JavaScript/TypeScript). Detects HTTP request data interpolated into LLM
+  system prompts via the Anthropic and OpenAI SDKs — f-string / template-
+  literal interpolation, `+` concatenation, and `.format()` injection into
+  `system=`, `system_prompt=`, `instructions=`, or an OpenAI messages-
+  array entry with `{"role": "system", ...}`. Taint sources include
+  `request.args`/`request.json`/`request.form` (Flask/Django),
+  `req.body`/`req.params`/`req.query` (Express/Fastify/Koa/Hono), and
+  common `userInput`/`userQuery` names. HIGH severity; CWE-20, CWE-94,
+  CWE-77. Fires only when the taint interpolation is within a ±3-line
+  window of a system-prompt indicator, so user-role messages with request
+  data are not flagged.
 - `aiscan metrics` subcommand: runs a scan, then uses `git blame` to map
   each finding to the commit that last touched its line and classifies
   that commit as AI-generated or human via `Co-Authored-By` trailers,

@@ -142,6 +142,7 @@ Sample output:
 | AI-SEC-015 | SSRF in Server-Side Fetch | HIGH | CWE-918 |
 | AI-SEC-016 | Insecure Cookie Flags | HIGH | CWE-614, CWE-1004, CWE-1275 |
 | AI-SEC-017 | Weak Content Security Policy | HIGH | CWE-693, CWE-1021 |
+| AI-SEC-018 | Prompt Injection via Untrusted Input | HIGH | CWE-20, CWE-94, CWE-77 |
 
 ### SSR / Electrode Coverage
 
