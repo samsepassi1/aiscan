@@ -6,6 +6,8 @@ All notable changes to aiscan are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-04-25
+
 ### Added
 - `.pre-commit-hooks.yaml` distribution. Adding aiscan to any repo is
   now a one-line `.pre-commit-config.yaml` entry:

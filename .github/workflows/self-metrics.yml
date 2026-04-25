@@ -1,0 +1,52 @@
+name: Self Metrics
+
+# Runs `aiscan metrics` on this repo weekly and commits a dated JSON
+# snapshot to metrics/. Over time the metrics/ directory becomes a trend
+# line of human-vs-AI defect rates that you can plot or diff.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed for git blame attribution
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install aiscan
+        run: pip install -e .
+
+      - name: Run metrics
+        run: |
+          mkdir -p metrics
+          aiscan metrics . \
+            --severity LOW \
+            --exclude tests \
+            --exclude src/aiscan/rules \
+            --format json \
+            --output metrics/latest.json
+          # Stamp a dated copy alongside the rolling latest.json so the
+          # directory is a time-series of attribution snapshots.
+          cp metrics/latest.json "metrics/$(date -u +%Y-%m-%d).json"
+
+      - name: Commit snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add metrics/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(metrics): weekly self-metrics snapshot $(date -u +%Y-%m-%d)"
+            git push
+          fi

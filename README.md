@@ -16,8 +16,19 @@ Traditional SAST tools are not tuned for these patterns. aiscan is.
 
 ## Installation
 
+The `aiscan` name on PyPI is taken by an unrelated project, so install
+from this repository directly:
+
 ```bash
-pip install aiscan
+pip install git+https://github.com/samsepassi1/aiscan@v0.2.0
+```
+
+Or pin a specific commit / branch by replacing `@v0.2.0`. Local
+development install:
+
+```bash
+git clone https://github.com/samsepassi1/aiscan && cd aiscan
+pip install -e ".[dev]"
 ```
 
 ## Quick Start
@@ -170,11 +181,27 @@ aiscan rules
 ## GitHub Actions
 
 ```yaml
-- uses: samsepassi1/aiscan@v1
+- uses: samsepassi1/aiscan@v0.2.0
   with:
     target: "src/"
     severity: "HIGH"
     llm: "false"
+```
+
+To enable the LLM tier, expose your provider key at the job or step
+level — the action reads `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from
+the workflow environment, so the secret must be wired explicitly:
+
+```yaml
+- uses: samsepassi1/aiscan@v0.2.0
+  with:
+    target: "src/"
+    severity: "HIGH"
+    llm: "true"
+    llm-provider: "anthropic"
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}   # for --llm-provider openai
 ```
 
 ## Pre-commit
