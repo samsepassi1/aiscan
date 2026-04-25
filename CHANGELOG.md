@@ -7,6 +7,11 @@ All notable changes to aiscan are documented here. This project follows
 ## [Unreleased]
 
 ### Added
+- `.pre-commit-hooks.yaml` distribution. Adding aiscan to any repo is
+  now a one-line `.pre-commit-config.yaml` entry:
+  `- repo: https://github.com/samsepassi1/aiscan` with `id: aiscan`.
+  The hook runs `aiscan scan --diff-only --severity HIGH --exit-code`
+  by default and accepts the standard pre-commit `args:` override.
 - `AI-SEC-018` Prompt Injection via Untrusted Input (Python +
   JavaScript/TypeScript). Detects HTTP request data interpolated into LLM
   system prompts via the Anthropic and OpenAI SDKs — f-string / template-

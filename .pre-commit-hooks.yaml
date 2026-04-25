@@ -1,0 +1,9 @@
+- id: aiscan
+  name: aiscan — AI code security scan
+  description: Scan AI-authored changes for common AppSec vulnerability patterns.
+  entry: aiscan scan
+  language: python
+  types_or: [python, javascript, jsx, ts, tsx, go, java]
+  pass_filenames: false
+  args: ['--diff-only', '--severity', 'HIGH', '--exit-code']
+  require_serial: true

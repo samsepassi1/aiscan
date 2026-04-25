@@ -177,6 +177,29 @@ aiscan rules
     llm: "false"
 ```
 
+## Pre-commit
+
+Add aiscan to any repo as a [pre-commit](https://pre-commit.com/) hook —
+one entry in `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/samsepassi1/aiscan
+    rev: v0.2.0   # or any tagged release
+    hooks:
+      - id: aiscan
+```
+
+By default the hook runs `aiscan scan --diff-only --severity HIGH --exit-code`,
+blocking commits that introduce new HIGH+ findings in changed files.
+Override any argument via pre-commit's standard `args:` override:
+
+```yaml
+hooks:
+  - id: aiscan
+    args: ['--diff-only', '--severity', 'CRITICAL', '--exit-code']
+```
+
 ## VS Code Extension
 
 Install the extension, then findings appear inline in the Problems panel. Supports:
