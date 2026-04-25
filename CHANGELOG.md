@@ -87,6 +87,16 @@ All notable changes to aiscan are documented here. This project follows
   picked 1.6.2 which is fine).
 
 ### Fixed
+- `AI-SEC-004` (Insecure Random) false positive when safe `secrets.*` calls
+  appeared on lines preceding unrelated `random.*` calls. The security-
+  context heuristic now filters out lines that themselves call `secrets.*`
+  before looking for security-context keywords, so the safe `secrets`
+  API doesn't pull its own variable names (`token`, `session_key`, `otp`)
+  into the context window of a nearby `random.randint(1, 6)` etc.
+- VS Code extension default LLM model aligned with the CLI / GitHub
+  Action default (`claude-sonnet-4-6`). Was previously `claude-sonnet-4-5`
+  in both `package.json` and the language server default, which drifted
+  from the rest of the toolchain.
 - LLM engine Anthropic response handling iterates content blocks to find
   the first `text` block; previously assumed `response.content[0].text`
   which broke on `tool_use`-first or empty-content responses.

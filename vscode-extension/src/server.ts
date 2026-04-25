@@ -19,7 +19,7 @@ let aiscanExecutable = 'aiscan';
 let llmEnabled = false;
 let minSeverity = 'LOW';
 let llmProvider = 'anthropic';
-let llmModel = 'claude-sonnet-4-5';
+let llmModel = 'claude-sonnet-4-6';
 let llmBaseUrl = '';
 
 connection.onInitialize((_params: InitializeParams): InitializeResult => {
@@ -36,7 +36,7 @@ connection.onDidChangeConfiguration((change) => {
   llmEnabled = config.llmEnabled || false;
   minSeverity = config.severity || 'LOW';
   llmProvider = config.llmProvider || 'anthropic';
-  llmModel = config.llmModel || 'claude-sonnet-4-5';
+  llmModel = config.llmModel || 'claude-sonnet-4-6';
   llmBaseUrl = config.llmBaseUrl || '';
   // Re-validate all open documents on config change
   documents.all().forEach(validateDocument);

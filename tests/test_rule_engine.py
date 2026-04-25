@@ -65,6 +65,13 @@ class TestRuleEngine:
         sec003 = [f for f in findings if f.rule_id == "AI-SEC-003"]
         assert len(sec003) == 0, f"False positive in crypto_safe.py: {sec003}"
 
+    def test_no_false_positives_random_safe(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, safe_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, safe_dir / "random_safe.py")
+        sec004 = [f for f in findings if f.rule_id == "AI-SEC-004"]
+        assert len(sec004) == 0, f"False positive in random_safe.py: {sec004}"
+
     def test_finding_has_required_fields(
         self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path
     ):

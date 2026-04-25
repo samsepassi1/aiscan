@@ -25,6 +25,12 @@ RANDOM_CALL_PATTERN = re.compile(
     r"\brandom\.(random|randint|randrange|choice|choices|sample|uniform|shuffle)\s*\("
 )
 
+# Calls to the `secrets` module are the recommended safe API; their
+# presence near a random.* call is not evidence that the random.* is
+# itself in a security context, even if the LHS variable name matches
+# the security-keyword pattern.
+SECRETS_CALL_PATTERN = re.compile(r"\bsecrets\.\w+\s*\(")
+
 
 class InsecureRandomRule(BaseRule):
     rule_id = "AI-SEC-004"
@@ -44,8 +50,13 @@ class InsecureRandomRule(BaseRule):
                 continue
 
             # Check the current line + preceding 5 lines for a security-context identifier.
-            # lines is 0-indexed; line i corresponds to lines[i-1].
-            context_window = "\n".join(lines[max(0, i - 6) : i])
+            # lines is 0-indexed; line i corresponds to lines[i-1]. Lines that call
+            # secrets.* are excluded so that safe usage above an unrelated random.*
+            # doesn't pull security keywords into the window.
+            context_lines = [
+                ln for ln in lines[max(0, i - 6) : i] if not SECRETS_CALL_PATTERN.search(ln)
+            ]
+            context_window = "\n".join(context_lines)
             if not SECURITY_CONTEXT_PATTERN.search(context_window):
                 continue
 
