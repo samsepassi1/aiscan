@@ -110,6 +110,12 @@ All notable changes to aiscan are documented here. This project follows
   picked 1.6.2 which is fine).
 
 ### Fixed
+- `aiscan metrics` invoked from a subdirectory now attributes findings
+  correctly. Previously every finding dropped into the `unknown` bucket
+  because `git blame` was invoked with a path relative to the user's
+  cwd, but the blame subprocess ran from the repo root. `Blamer` now
+  captures the invocation cwd at construction time and resolves
+  relative finding paths against it before running git blame.
 - `AI-SEC-004` (Insecure Random) false positive when safe `secrets.*` calls
   appeared on lines preceding unrelated `random.*` calls. The security-
   context heuristic now filters out lines that themselves call `secrets.*`

@@ -24,8 +24,13 @@ class BlameError(Exception):
 
 
 class Blamer:
-    def __init__(self, repo_root: Path) -> None:
+    def __init__(self, repo_root: Path, invocation_cwd: Path | None = None) -> None:
         self._root = repo_root
+        # Scanner records Finding.file_path relative to whatever target the
+        # CLI was handed — i.e. relative to the user's cwd at invocation.
+        # We capture that cwd so blame_sha can promote those paths to
+        # absolute before running git blame from the repo root.
+        self._invocation_cwd = (invocation_cwd or Path.cwd()).resolve()
         self._blame_cache: dict[tuple[str, int], str | None] = {}
         self._commit_cache: dict[str, CommitInfo | None] = {}
 
@@ -49,7 +54,7 @@ class Blamer:
             ) from exc
         except FileNotFoundError as exc:
             raise BlameError("git executable not found on PATH") from exc
-        return cls(Path(out.stdout.strip()))
+        return cls(Path(out.stdout.strip()), invocation_cwd=Path.cwd())
 
     @property
     def repo_root(self) -> Path:
@@ -61,13 +66,21 @@ class Blamer:
         Returns None when the line is uncommitted (staged or unstaged), the
         file is untracked, or blame otherwise fails.
         """
-        key = (str(file_path), line)
+        # Absolute paths pass through; relative ones are resolved against
+        # the CLI's invocation cwd. Git blame accepts either, and the
+        # absolute form is correct regardless of which directory the blame
+        # subprocess runs in.
+        if file_path.is_absolute():
+            resolved = file_path
+        else:
+            resolved = (self._invocation_cwd / file_path).resolve()
+        key = (str(resolved), line)
         if key in self._blame_cache:
             return self._blame_cache[key]
 
         try:
             out = subprocess.run(
-                ["git", "blame", "--porcelain", "-L", f"{line},{line}", "--", str(file_path)],
+                ["git", "blame", "--porcelain", "-L", f"{line},{line}", "--", str(resolved)],
                 cwd=self._root,
                 capture_output=True,
                 text=True,

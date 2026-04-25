@@ -192,6 +192,32 @@ class TestComputeMetrics:
         assert ai.by_severity.get("CRITICAL", 0) >= 1
         assert ai.by_rule.get("AI-SEC-001", 0) >= 1
 
+    def test_metrics_from_subdir_still_attributes(self, tmp_path: Path, monkeypatch):
+        # Regression: running `aiscan metrics .` from a subdirectory used
+        # to drop every finding into the `unknown` bucket because the
+        # Scanner recorded paths relative to the user's cwd while git
+        # blame ran from the repo root. Blamer now captures the invocation
+        # cwd and resolves relative finding paths against it.
+        _init_repo(tmp_path)
+        (tmp_path / "sub").mkdir()
+        _commit_file(tmp_path, "sub/a.py", _VULN_LINE, "feat: a")
+
+        monkeypatch.chdir(tmp_path / "sub")
+        result = compute_metrics(Path("."), min_severity="LOW")
+
+        assert result.buckets["human"].count >= 1, (
+            f"expected findings attributed to human; got buckets "
+            f"{ {k: v.count for k, v in result.buckets.items()} }"
+        )
+        # And the inverse: no finding should land in unknown/uncommitted
+        # just because we ran from a subdir.
+        uncommitted = [
+            af for af in result.annotated
+            if af.attribution.origin == Origin.UNKNOWN
+            and af.attribution.reason == "uncommitted"
+        ]
+        assert not uncommitted, f"subdir invocation leaked findings into uncommitted: {uncommitted}"
+
     def test_uncommitted_line_is_unknown(self, tmp_path: Path):
         _init_repo(tmp_path)
         # Seed the repo with a baseline so HEAD exists.
