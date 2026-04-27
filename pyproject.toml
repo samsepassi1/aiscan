@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-    { name = "Sam Sepassi", email = "samsepassi2@gmail.com" },
+    { name = "Sam Sepassi" },
 ]
 keywords = ["security", "scanner", "ai", "llm", "appsec", "sast"]
 classifiers = [
