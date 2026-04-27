@@ -136,6 +136,32 @@ Sample output:
 ╰────────────┴────────┴────────┴───────┴───────┴───────┴───────┴───────╯
 ```
 
+### Detection coverage and what it means for your repo
+
+Attribution fires only when a commit carries an AI marker that aiscan
+can recognize: a `Co-Authored-By:` trailer naming a known agent, a body
+marker like `Generated with [Claude Code]`, or an author email matching
+an AI vendor domain (e.g. `noreply@anthropic.com`,
+`@copilot.github.com`, `@cursor.sh`). What that means in practice:
+
+- **Claude Code** adds `Co-Authored-By: Claude` to commits automatically
+  and works out of the box.
+- **GitHub Copilot, Cursor, ChatGPT, aider, and most other tools** do
+  *not* tag commits by default. On a repo where the team uses these
+  without trailers, AI-authored code will mostly land in the `human`
+  bucket because there's no signal to distinguish it.
+
+If you want meaningful coverage on a repo where AI tools aren't already
+tagging commits, the simplest fix is a one-line shared commit template
+or git hook that appends a `Co-Authored-By:` trailer when AI was used.
+Once your team adopts that, `aiscan metrics` becomes a real trend line
+of human vs. AI defect rates over time.
+
+Heuristic detection without explicit markers (commit-message linguistic
+patterns, PR-author analysis, etc.) is on the roadmap but not in v0.2.0
+— that approach trades higher coverage for higher false-positive rates,
+so the v1 implementation prefers the high-precision marker-based path.
+
 ## Detection Rules
 
 | Rule ID | Name | Severity | CWE |
