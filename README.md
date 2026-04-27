@@ -281,4 +281,4 @@ pytest tests/ -v
 
 ## License
 
-MIT. Copyright © 2025 Sam Sepassi.
+MIT. Copyright © 2026 Sam Sepassi.
