@@ -6,6 +6,22 @@ All notable changes to aiscan are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-04-27
+
+### Changed
+- Removed personal email address from the `authors` field in
+  `pyproject.toml` and from the `author` field in `action.yml`. The
+  package and Action are now attributed to the GitHub identity only.
+- Bumped copyright year in the README to 2026.
+- Minor `IFS` quoting cleanup in `action.yml`.
+
+### Added
+- `CONTRIBUTING.md` with contributor guidance.
+
+### Documentation
+- Clarify that `aiscan metrics` detection coverage applies on third-party
+  repos as well as the local working tree (commit `46a3455`).
+
 ## [0.2.0] — 2026-04-25
 
 ### Added

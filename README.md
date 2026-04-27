@@ -20,10 +20,10 @@ The `aiscan` name on PyPI is taken by an unrelated project, so install
 from this repository directly:
 
 ```bash
-pip install git+https://github.com/samsepassi1/aiscan@v0.2.0
+pip install git+https://github.com/samsepassi1/aiscan@v0.2.1
 ```
 
-Or pin a specific commit / branch by replacing `@v0.2.0`. Local
+Or pin a specific commit / branch by replacing `@v0.2.1`. Local
 development install:
 
 ```bash
@@ -158,7 +158,7 @@ Once your team adopts that, `aiscan metrics` becomes a real trend line
 of human vs. AI defect rates over time.
 
 Heuristic detection without explicit markers (commit-message linguistic
-patterns, PR-author analysis, etc.) is on the roadmap but not in v0.2.0
+patterns, PR-author analysis, etc.) is on the roadmap but not in v0.2.1
 — that approach trades higher coverage for higher false-positive rates,
 so the v1 implementation prefers the high-precision marker-based path.
 
@@ -207,7 +207,7 @@ aiscan rules
 ## GitHub Actions
 
 ```yaml
-- uses: samsepassi1/aiscan@v0.2.0
+- uses: samsepassi1/aiscan@v0.2.1
   with:
     target: "src/"
     severity: "HIGH"
@@ -219,7 +219,7 @@ level — the action reads `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from
 the workflow environment, so the secret must be wired explicitly:
 
 ```yaml
-- uses: samsepassi1/aiscan@v0.2.0
+- uses: samsepassi1/aiscan@v0.2.1
   with:
     target: "src/"
     severity: "HIGH"
@@ -238,7 +238,7 @@ one entry in `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/samsepassi1/aiscan
-    rev: v0.2.0   # or any tagged release
+    rev: v0.2.1   # or any tagged release
     hooks:
       - id: aiscan
 ```
