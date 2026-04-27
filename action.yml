@@ -1,6 +1,6 @@
 name: "aiscan"
 description: "AI-native security scanner for AI-generated code — catches the vulnerabilities AI coding assistants introduce"
-author: "Sam Sepassi <samsepassi2@gmail.com>"
+author: "samsepassi1"
 
 branding:
   icon: "shield"
@@ -52,7 +52,7 @@ runs:
       run: |
         EXCLUDE_ARGS=""
         if [ -n "${{ inputs.exclude }}" ]; then
-          IFS=',' read -ra PATHS <<< "${{ inputs.exclude }}"
+          IFS=, read -ra PATHS <<< "${{ inputs.exclude }}"
           for p in "${PATHS[@]}"; do
             EXCLUDE_ARGS="$EXCLUDE_ARGS --exclude $(echo $p | xargs)"
           done
@@ -76,3 +76,4 @@ runs:
       with:
         sarif_file: ${{ inputs.sarif-output }}
       if: always()
+
