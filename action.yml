@@ -45,31 +45,48 @@ runs:
         python-version: "3.11"
 
     - name: Install aiscan
-      run: pip install -e "${{ github.action_path }}"
+      env:
+        AISCAN_ACTION_PATH: ${{ github.action_path }}
+      run: pip install "$AISCAN_ACTION_PATH"
       shell: bash
 
     - name: Run aiscan
-      run: |
-        EXCLUDE_ARGS=""
-        if [ -n "${{ inputs.exclude }}" ]; then
-          IFS=, read -ra PATHS <<< "${{ inputs.exclude }}"
-          for p in "${PATHS[@]}"; do
-            EXCLUDE_ARGS="$EXCLUDE_ARGS --exclude $(echo $p | xargs)"
-          done
-        fi
-        aiscan scan "${{ inputs.target }}" \
-          --severity "${{ inputs.severity }}" \
-          --format sarif \
-          --output "${{ inputs.sarif-output }}" \
-          --exit-code \
-          $EXCLUDE_ARGS \
-          ${{ inputs.llm == 'true' && '--llm' || '' }} \
-          ${{ inputs.llm == 'true' && format('--llm-provider {0}', inputs.llm-provider) || '' }} \
-          ${{ inputs.llm == 'true' && format('--llm-model {0}', inputs.llm-model) || '' }}
       shell: bash
       env:
+        # All user-controlled inputs go through env vars rather than direct
+        # ${{ }} interpolation into the script body — this prevents script
+        # injection if a caller passes a value containing shell metacharacters.
+        AISCAN_TARGET: ${{ inputs.target }}
+        AISCAN_SEVERITY: ${{ inputs.severity }}
+        AISCAN_SARIF_OUTPUT: ${{ inputs.sarif-output }}
+        AISCAN_EXCLUDE: ${{ inputs.exclude }}
+        AISCAN_LLM: ${{ inputs.llm }}
+        AISCAN_LLM_PROVIDER: ${{ inputs.llm-provider }}
+        AISCAN_LLM_MODEL: ${{ inputs.llm-model }}
         ANTHROPIC_API_KEY: ${{ env.ANTHROPIC_API_KEY }}
         OPENAI_API_KEY: ${{ env.OPENAI_API_KEY }}
+      run: |
+        set -euo pipefail
+        ARGS=(scan "$AISCAN_TARGET"
+              --severity "$AISCAN_SEVERITY"
+              --format sarif
+              --output "$AISCAN_SARIF_OUTPUT"
+              --exit-code)
+        if [ -n "$AISCAN_EXCLUDE" ]; then
+          IFS=',' read -ra PATHS <<< "$AISCAN_EXCLUDE"
+          for p in "${PATHS[@]}"; do
+            # Trim leading/trailing whitespace via parameter expansion — no
+            # subshell, no command substitution, so untrusted input cannot
+            # execute arbitrary shell.
+            p="${p#"${p%%[![:space:]]*}"}"
+            p="${p%"${p##*[![:space:]]}"}"
+            [ -n "$p" ] && ARGS+=(--exclude "$p")
+          done
+        fi
+        if [ "$AISCAN_LLM" = "true" ]; then
+          ARGS+=(--llm --llm-provider "$AISCAN_LLM_PROVIDER" --llm-model "$AISCAN_LLM_MODEL")
+        fi
+        aiscan "${ARGS[@]}"
 
     - name: Upload SARIF to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
