@@ -41,6 +41,13 @@ class TestJSRules:
         rule_ids = [f.rule_id for f in findings]
         assert "AI-SEC-011" in rule_ids
 
+    def test_detects_path_traversal_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path
+    ):
+        findings = self._scan(rule_engine, ast_layer, vulnerable_dir / "path_traversal_test.js")
+        pt = [f for f in findings if f.rule_id == "AI-SEC-011"]
+        assert len(pt) >= 3, f"expected ≥3 path-traversal findings, got {len(pt)}: {pt}"
+
     def test_path_traversal_no_false_positive_on_benign_join(
         self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
     ):
@@ -56,6 +63,26 @@ class TestJSRules:
         findings = self._scan(rule_engine, ast_layer, f)
         pt = [fi for fi in findings if fi.rule_id == "AI-SEC-011"]
         assert pt == [], f"False positive on benign path join: {pt}"
+
+    def test_path_traversal_no_false_positive_on_function_params_js(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        """path.join(params.dir, "x") where `params` is a function parameter
+        must not fire. This is the openclaw failure mode — bare `params.`,
+        `body.`, and `query.` are not request-taint markers on their own."""
+        f = tmp_path / "helper.ts"
+        f.write_text(
+            "import path from 'node:path';\n"
+            "export function buildPath(params: { dir: string; name: string }) {\n"
+            "  return path.join(params.dir, params.name);\n"
+            "}\n"
+            "export function writeBody(file: string, body: { data: string }) {\n"
+            "  fs.writeFileSync(file, body.data);\n"
+            "}\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        pt = [fi for fi in findings if fi.rule_id == "AI-SEC-011"]
+        assert pt == [], f"False positive on function-param `params.`/`body.`: {pt}"
 
     def test_eval_literal_string_no_finding(self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path):
         f = tmp_path / "safe.js"

@@ -163,6 +163,20 @@ def write_terminal(result: ScanResult, console: Console | None = None) -> None:
     )
     con.print()
 
+    # An empty file count is almost always a misconfiguration, not a clean
+    # bill of health (target path wrong, every file ignored by .aiscanignore,
+    # or no files in supported extensions). Distinguish loudly.
+    if result.total_files_scanned == 0:
+        con.print(
+            "[bold yellow]No scannable files found under target.[/bold yellow]"
+        )
+        con.print(
+            "[dim]Supported extensions: .py, .js, .jsx, .ts, .tsx, .go, .java. "
+            "Check the target path, .aiscanignore, and --exclude flags.[/dim]"
+        )
+        con.print()
+        return
+
     if not active:
         con.print("[bold green]No findings — clean scan.[/bold green]")
         if suppressed:

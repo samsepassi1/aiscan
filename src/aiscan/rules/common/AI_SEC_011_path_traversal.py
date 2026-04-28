@@ -14,8 +14,19 @@ from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
-# Taint markers — identifiers that commonly carry request-derived data in Python web code.
-_PY_TAINT = r"(?:request|flask\.request|req|user_input|form\.|args\.|params\.|query|body|cookies\.|headers\.)"
+# Taint markers — must clearly identify HTTP request-derived data, not just any
+# variable named "params", "body", "query", "args", etc. (those collide with
+# function parameters, response bodies, DB queries, CLI args — extremely common
+# in real codebases and the source of >90% of historical FPs on this rule).
+# Anchor on the request object: `request.X` (Flask/Django/FastAPI),
+# `req.X` (Express/Fastify-style code in Python), `flask.request`, or the
+# explicit semantic marker `user_input`.
+_PY_TAINT = (
+    r"(?:request\.(?:args|form|json|data|values|files|cookies|headers|params|query|body|GET|POST|FILES|stream)"
+    r"|flask\.request"
+    r"|req\.(?:body|query|params|args|form|cookies|headers|url|path|originalUrl)"
+    r"|user_input)"
+)
 
 # Python patterns — each requires a taint marker on the same line to avoid
 # flagging well-behaved code like open(os.path.join(CACHE_DIR, filename)).
@@ -45,10 +56,17 @@ _TAINT_ASSIGN = re.compile(
     re.IGNORECASE,
 )
 
-# JS/TS patterns
+# JS/TS taint markers — same logic as Python: require the request-object
+# prefix, not bare `params.X` / `body.X` / `query.X` (which match function
+# parameters, response bodies, and DB queries respectively).
+_JS_TAINT = (
+    r"(?:req|request|ctx\.request|context\.request)"
+    r"\.(?:body|query|params|headers|cookies|url|path|originalUrl|hostname|ip)"
+)
+
 JS_PATTERNS = [
-    re.compile(r"""(?:fs\.readFile|fs\.writeFile|fs\.readFileSync|fs\.writeFileSync)\s*\([^)]*(?:req\.|params\.|query\.|body\.)[^)]*"""),
-    re.compile(r"""path\.join\s*\([^)]*(?:req\.|params\.|query\.|body\.)[^)]*\)"""),
+    re.compile(rf"""(?:fs\.readFile|fs\.writeFile|fs\.readFileSync|fs\.writeFileSync|fs\.createReadStream|fs\.createWriteStream)\s*\([^)]*{_JS_TAINT}[^)]*"""),
+    re.compile(rf"""(?:path\.join|path\.resolve)\s*\([^)]*{_JS_TAINT}[^)]*\)"""),
 ]
 
 LANGUAGE_PATTERNS: dict[str, list[re.Pattern]] = {

@@ -6,6 +6,37 @@ All notable changes to aiscan are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-04-28
+
+### Fixed
+- `AI-SEC-011` (path traversal) precision overhaul. The previous taint
+  markers (`params.`, `body.`, `query.`, `args.`, `form.`, etc. as bare
+  tokens) collided with extraordinarily common patterns in real
+  TypeScript/Python code: function-parameter objects named `params`,
+  response `body`, database `query` objects, and so on. On a 13.8k-file
+  TypeScript codebase this rule alone produced 437 of 471 HIGH+ findings
+  (≈93%), virtually all from `path.join(params.X, ...)` where `params`
+  was a function parameter rather than HTTP request data. Tightened the
+  taint regex to require the request-object prefix
+  (`req.body`, `request.args`, `req.params`, `ctx.request.body`, etc.),
+  not bare identifiers. Same external scan now produces 0 path-traversal
+  findings on that codebase, with no regression on the existing test
+  fixture (`tests/fixtures/vulnerable/path_traversal_test.py`).
+- Terminal output no longer claims "No findings — clean scan" when zero
+  files were scanned. `Files: 0` is almost always a misconfiguration
+  (wrong target path, every file ignored, no files in supported
+  extensions) and now surfaces as a yellow warning with a hint about
+  supported extensions and the `.aiscanignore` / `--exclude` flags. JSON
+  and SARIF output are unchanged — `total_files_scanned` was already
+  correct there.
+
+### Added
+- `tests/fixtures/vulnerable/path_traversal_test.js` covering the
+  Express request-object patterns (`req.body.path`, `req.query.name`,
+  `req.params.name`) and a benign-helper test asserting that
+  function-parameter `params.dir` and `body.data` do **not** fire — the
+  exact failure mode the v0.2.2 rule had.
+
 ## [0.2.2] — 2026-04-28
 
 ### Added

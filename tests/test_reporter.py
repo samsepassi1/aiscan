@@ -141,3 +141,16 @@ class TestTerminalOutput:
         })
         console = Console(file=StringIO(), force_terminal=False)
         write_terminal(result, console=console)
+
+    def test_terminal_zero_files_warns_instead_of_clean(self):
+        """Files=0 is a misconfig signal, not a clean bill of health.
+        The terminal must surface it as a warning, not 'No findings — clean scan.'"""
+        result = make_sample_result()
+        result.findings = []
+        result.total_files_scanned = 0
+        out = StringIO()
+        console = Console(file=out, force_terminal=False, width=120)
+        write_terminal(result, console=console)
+        text = out.getvalue()
+        assert "No scannable files" in text
+        assert "clean scan" not in text
