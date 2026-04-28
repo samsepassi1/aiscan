@@ -14,8 +14,12 @@ from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
-# Matches eval() or exec() with a non-literal argument
-# We match any eval/exec call and then check if the argument is a plain string literal
+# Matches eval() or exec() with a non-literal argument.
+# STRING_LITERAL_ONLY anchors with ^...$ so a trailing comment or assignment
+# (e.g. `x = eval('1+1')  # comment`) falls through and fires. That's
+# intentional: literal-string eval is still an anti-pattern, and most
+# ergonomic uses live on a bare line. A tree-sitter argument-type check
+# would be more precise but the regex covers the common AI-generated shapes.
 EVAL_EXEC_PATTERN = re.compile(r"\b(eval|exec)\s*\(")
 STRING_LITERAL_ONLY = re.compile(r"""^\s*(eval|exec)\s*\(\s*["'][^"']*["']\s*\)\s*$""")
 

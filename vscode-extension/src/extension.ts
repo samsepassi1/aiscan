@@ -88,6 +88,21 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  // Register: View Remediation — wired up by the QuickFix CodeAction below.
+  // The full remediation text is stored on diag.message; show it in a modal.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'aiscan.viewRemediation',
+      (diag: vscode.Diagnostic) => {
+        const code = typeof diag.code === 'object' ? diag.code.value : diag.code;
+        vscode.window.showInformationMessage(
+          `aiscan ${code ?? ''}: ${diag.message}`,
+          { modal: true }
+        );
+      }
+    )
+  );
+
   // CodeAction provider — "View remediation" and "Suppress finding"
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(
@@ -138,7 +153,10 @@ class AiscanCodeActionProvider implements vscode.CodeActionProvider {
       };
       actions.push(remediationAction);
 
-      // "Suppress finding" action — inserts # aiscan: suppress comment
+      // "Suppress finding" action — inserts an aiscan: suppress comment.
+      // The comment syntax is language-aware so the inserted text is an
+      // actual comment and the aggregator's per-language matcher recognises
+      // it. # is Python; // covers JS/TS/Go/Java.
       const suppressAction = new vscode.CodeAction(
         `aiscan: Suppress ${diag.code} on this line`,
         vscode.CodeActionKind.QuickFix
@@ -146,10 +164,12 @@ class AiscanCodeActionProvider implements vscode.CodeActionProvider {
       suppressAction.diagnostics = [diag];
       suppressAction.edit = new vscode.WorkspaceEdit();
       const line = document.lineAt(diag.range.start.line);
+      const marker =
+        document.languageId === 'python' ? '# aiscan: suppress' : '// aiscan: suppress';
       suppressAction.edit.insert(
         document.uri,
         new vscode.Position(diag.range.start.line, line.text.length),
-        '  # aiscan: suppress'
+        `  ${marker}`
       );
       actions.push(suppressAction);
     }

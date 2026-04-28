@@ -1,5 +1,5 @@
 import * as cp from 'child_process';
-import * as path from 'path';
+import { fileURLToPath } from 'url';
 import {
   createConnection,
   TextDocuments,
@@ -23,9 +23,11 @@ let llmModel = 'claude-sonnet-4-6';
 let llmBaseUrl = '';
 
 connection.onInitialize((_params: InitializeParams): InitializeResult => {
+  // We re-scan on save (and on demand), not on every keystroke. Declare Full
+  // sync so the client doesn't bother sending incremental change events.
   return {
     capabilities: {
-      textDocumentSync: TextDocumentSyncKind.Incremental,
+      textDocumentSync: TextDocumentSyncKind.Full,
     },
   };
 });
@@ -45,9 +47,18 @@ connection.onDidChangeConfiguration((change) => {
 documents.onDidOpen((event) => validateDocument(event.document));
 documents.onDidSave((event) => validateDocument(event.document));
 
+function uriToPath(uri: string): string {
+  // file:// URIs include percent-encoding for spaces and special chars;
+  // a naive replace(/^file:\/\//, '') breaks paths like '/My%20Project/'.
+  if (uri.startsWith('file://')) {
+    return fileURLToPath(uri);
+  }
+  return uri;
+}
+
 async function validateDocument(textDocument: TextDocument): Promise<void> {
   const uri = textDocument.uri;
-  const filePath = uri.replace(/^file:\/\//, '');
+  const filePath = uriToPath(uri);
 
   const args = [
     'scan',
@@ -74,8 +85,17 @@ async function validateDocument(textDocument: TextDocument): Promise<void> {
       proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
       proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
       proc.on('close', () => resolve());
-      proc.on('error', () => resolve()); // aiscan not installed → silent
+      proc.on('error', (err: Error) => {
+        // Surface spawn failures (e.g. aiscan not installed) once via console
+        // so they're visible in the LSP output channel, then continue without
+        // diagnostics rather than hanging the editor.
+        connection.console.warn(`aiscan: spawn failed (${err.message})`);
+        resolve();
+      });
     });
+    if (stderr.trim()) {
+      connection.console.info(`aiscan stderr: ${stderr.trim()}`);
+    }
 
     const diagnostics: Diagnostic[] = [];
 
@@ -124,7 +144,6 @@ function mapSeverity(sev: string): DiagnosticSeverity {
 
 // Handle custom requests from the extension client
 connection.onRequest('aiscan/scanFile', async (params: { uri: string }) => {
-  const filePath = params.uri.replace(/^file:\/\//, '');
   const doc = documents.get(params.uri);
   if (doc) {
     await validateDocument(doc);

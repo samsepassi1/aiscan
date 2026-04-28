@@ -165,7 +165,11 @@ def scan(
         cache_dir=str(cache_dir) if cache_dir else None,
     )
 
-    if output_format == "terminal":
+    # Writing terminal markup to a file is never useful, so promote `--output`
+    # without an explicit format to JSON (the only structured default).
+    effective_format = "json" if output and output_format == "terminal" else output_format
+
+    if effective_format == "terminal":
         console.print(f"[dim]Scanning [bold]{target}[/bold]...[/dim]")
 
     result = scanner.scan(target)
@@ -182,13 +186,13 @@ def scan(
     # Output
     from aiscan import reporter
 
-    if output_format == "terminal":
+    if effective_format == "terminal":
         reporter.write_terminal(filtered, console=console)
-    elif output_format == "sarif":
+    elif effective_format == "sarif":
         sarif_str = reporter.write_sarif(filtered, path=output)
         if not output:
             click.echo(sarif_str)
-    elif output_format == "json":
+    elif effective_format == "json":
         json_str = reporter.write_json(filtered, path=output)
         if not output:
             click.echo(json_str)
@@ -293,7 +297,7 @@ def metrics(
             min_severity=severity,
         )
     except BlameError as exc:
-        raise click.ClickException(str(exc))
+        raise click.ClickException(str(exc)) from exc
 
     if effective_format == "terminal":
         reporter.write_metrics_terminal(result, console=console)

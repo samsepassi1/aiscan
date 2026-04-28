@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import re
+import warnings
 from collections import Counter
 from typing import TYPE_CHECKING
 
@@ -19,11 +20,15 @@ if TYPE_CHECKING:
     from tree_sitter import Node
 
 
-# Variable/attribute names that commonly hold secrets
+# Variable/attribute names that commonly hold secrets. Note: bare "auth" was
+# removed because it caused FPs on auth_endpoint/auth_url/auth_method assigned
+# to high-entropy URL strings. The auth_token/auth_key/auth_secret variants
+# below cover the actual secret-bearing names.
 SECRET_NAME_PATTERN = re.compile(
     r"(password|passwd|pwd|secret|api_key|apikey|token|auth_token|"
-    r"access_token|refresh_token|auth|credential|private_key|signing_key|"
-    r"encryption_key|database_url|db_url|db_pass|connection_string)",
+    r"auth_key|auth_secret|access_token|refresh_token|"
+    r"credential|private_key|signing_key|encryption_key|"
+    r"database_url|db_url|db_pass|connection_string)",
     re.IGNORECASE,
 )
 
@@ -102,23 +107,39 @@ class HardcodedSecretsRule(BaseRule):
             from tree_sitter_language_pack import get_language
             lang = get_language(parsed.language)  # type: ignore[arg-type]
             query = Query(lang, self._QUERY_SRC)
-            captures = query.captures(parsed.tree.root_node)
+            # tree-sitter >=0.25 moved captures()/matches() from Query onto a
+            # separate QueryCursor object. Older releases keep them on Query.
+            # Try the new shape first, then fall back to the legacy method.
+            try:
+                from tree_sitter import QueryCursor
+                cursor = QueryCursor(query)
+                captures = cursor.captures(parsed.tree.root_node)
+            except ImportError:
+                captures = query.captures(parsed.tree.root_node)  # type: ignore[attr-defined]
 
             # captures is a dict {capture_name: [nodes]} or list of (node, name) tuples
             # Normalize to list of (node, capture_name)
             if isinstance(captures, dict):
-                pairs: list[tuple["Node", str]] = []
+                pairs: list[tuple[Node, str]] = []
                 for cap_name, nodes in captures.items():
                     for node in nodes:
                         pairs.append((node, cap_name))
             else:
                 pairs = list(captures)
-        except Exception:
-            # Fallback: manual traversal if query API unavailable
+        except Exception as exc:
+            # Fallback: line-regex check if the tree-sitter Query API isn't
+            # available (or has changed shape). Surface why so the regression
+            # is visible — the regex fallback has lower confidence and weaker
+            # coverage, and silent fallback hid this in past upgrades.
+            warnings.warn(
+                f"aiscan: AI-SEC-001 tree-sitter query unavailable on "
+                f"{parsed.path} ({exc}); using line-regex fallback.",
+                stacklevel=2,
+            )
             return self._manual_check(parsed)
 
         # Group by row, collecting all name nodes and value nodes per row
-        by_row: dict[int, dict[str, list["Node"]]] = {}
+        by_row: dict[int, dict[str, list[Node]]] = {}
         for node, cap_name in pairs:
             row = node.start_point[0]
             if row not in by_row:

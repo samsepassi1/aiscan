@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +22,7 @@ class BucketStats(BaseModel):
 
 class AnnotatedFinding(BaseModel):
     finding: Finding
-    commit_sha: Optional[str] = None
+    commit_sha: str | None = None
     attribution: Attribution
 
 
@@ -115,7 +114,7 @@ def compute_metrics(
     return MetricsResult(
         scan_id=str(uuid.uuid4()),
         target_path=str(target),
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         total_findings=len(annotated),
         buckets=buckets,
         annotated=annotated,

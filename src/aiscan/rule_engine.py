@@ -57,7 +57,14 @@ class RuleEngine:
 
     def run(self, parsed: ParsedFile) -> list[Finding]:
         """Run all applicable rules against a parsed file. Never raises — rule failures emit a warning."""
+        findings, _ = self.run_with_errors(parsed)
+        return findings
+
+    def run_with_errors(self, parsed: ParsedFile) -> tuple[list[Finding], int]:
+        """Same as run(), but also returns a count of rule failures so the
+        Scanner can flag the run as partially-successful."""
         findings: list[Finding] = []
+        errors = 0
         for rule in self.rules:
             if parsed.language not in rule.languages:
                 continue
@@ -65,11 +72,12 @@ class RuleEngine:
                 new_findings = rule.check(parsed)
                 findings.extend(new_findings)
             except Exception as exc:
+                errors += 1
                 warnings.warn(
                     f"aiscan: rule {rule.rule_id} failed on {parsed.path} ({exc}); skipping rule.",
                     stacklevel=2,
                 )
-        return findings
+        return findings, errors
 
     def list_rules(self) -> list[dict]:
         """Return rule metadata for display."""

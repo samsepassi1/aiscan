@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from click.testing import CliRunner
+
+from aiscan.cli import main
 from aiscan.scanner import Scanner
 from aiscan.models import ScanResult
 
@@ -94,6 +98,69 @@ class TestScannerIntegration:
             result = scanner.scan(tmp_path)
         assert isinstance(result, ScanResult)
         assert any("diff-only" in str(warning.message) for warning in w)
+
+    def test_missing_exclude_path_warns(self, tmp_path: Path):
+        (tmp_path / "app.py").write_text("x = 1\n")
+        scanner = Scanner(llm_enabled=False, exclude=("does_not_exist",))
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            scanner.scan(tmp_path)
+        assert any(
+            "does not exist" in str(warning.message)
+            and "does_not_exist" in str(warning.message)
+            for warning in w
+        ), [str(x.message) for x in w]
+
+    def test_rule_failure_bumps_scan_errors_and_sarif_unsuccessful(
+        self, tmp_path: Path
+    ):
+        """A rule that raises must increment ScanResult.scan_errors and the
+        SARIF executionSuccessful field must reflect the partial failure."""
+        from aiscan.reporter import generate_sarif
+
+        (tmp_path / "app.py").write_text("x = 1\n")
+        scanner = Scanner(llm_enabled=False)
+
+        class _Boom:
+            rule_id = "AI-TEST-999"
+            languages = ["python"]
+            def check(self, parsed):
+                raise RuntimeError("rule blew up")
+
+        scanner._rule_engine.rules.append(_Boom())
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = scanner.scan(tmp_path)
+        assert result.scan_errors >= 1
+        sarif = generate_sarif(result)
+        assert sarif["runs"][0]["invocations"][0]["executionSuccessful"] is False
+
+    def test_unreadable_file_bumps_scan_errors(self, tmp_path: Path, monkeypatch):
+        """Read failures (OSError on path.read_bytes) must count toward
+        scan_errors so SARIF flags the run as incomplete instead of the file
+        being silently dropped."""
+        (tmp_path / "ok.py").write_text("x = 1\n")
+        unreadable = tmp_path / "unreadable.py"
+        unreadable.write_text("y = 2\n")
+
+        from aiscan.ast_layer import ASTLayer
+        real_parse = ASTLayer.parse_file
+
+        def fake_parse(self, path):
+            if path.name == "unreadable.py":
+                raise PermissionError(f"simulated read failure on {path}")
+            return real_parse(self, path)
+
+        monkeypatch.setattr(ASTLayer, "parse_file", fake_parse)
+        scanner = Scanner(llm_enabled=False)
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = scanner.scan(tmp_path)
+        assert result.scan_errors >= 1
+        assert any("failed to read" in str(warning.message) for warning in w)
 
 
 class TestDiffOnlyRealGit:
@@ -213,6 +280,38 @@ class TestLLMMaxLines:
         scanner.scan(tmp_path)
         _, kwargs = mock_llm.analyze.call_args
         assert kwargs["max_lines"] == 42
+
+
+class TestScanOutputFlag:
+    """Regression: `scan -o X` with the default terminal format used to print
+    a Rich table to the screen and claim "Results written to X" without
+    actually writing the file. With the fix, `--output` promotes the format
+    to JSON when no explicit format is given."""
+
+    def test_output_flag_writes_file_without_explicit_format(self, tmp_path: Path):
+        src = tmp_path / "a.py"
+        src.write_text(_SECRET_LINE)
+        out_path = tmp_path / "results.json"
+        runner = CliRunner()
+        result = runner.invoke(main, ["scan", str(src), "-o", str(out_path)])
+        assert result.exit_code == 0, result.output
+        assert out_path.exists(), "expected --output path to be written"
+        data = json.loads(out_path.read_text())
+        assert "findings" in data
+
+    def test_output_flag_with_explicit_sarif(self, tmp_path: Path):
+        src = tmp_path / "a.py"
+        src.write_text(_SECRET_LINE)
+        out_path = tmp_path / "results.sarif"
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            ["scan", str(src), "--format", "sarif", "-o", str(out_path)],
+        )
+        assert result.exit_code == 0, result.output
+        assert out_path.exists()
+        data = json.loads(out_path.read_text())
+        assert data["version"] == "2.1.0"
 
 
 class TestCacheDirDefault:

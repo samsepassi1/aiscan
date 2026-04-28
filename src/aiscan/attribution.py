@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -30,7 +29,7 @@ class CommitInfo(BaseModel):
 class Attribution(BaseModel):
     origin: Origin
     reason: str
-    matched_agent: Optional[str] = None
+    matched_agent: str | None = None
 
 
 # Agent signatures. Trailer matches are case-insensitive substring checks

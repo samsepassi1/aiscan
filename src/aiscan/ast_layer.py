@@ -45,10 +45,10 @@ class ParsedFile:
     path: Path
     language: str
     source: bytes
-    tree: "Tree"
+    tree: Tree
     lines: list[str] = field(default_factory=list)
 
-    def get_node_text(self, node: "Node") -> str:
+    def get_node_text(self, node: Node) -> str:
         """Extract source text for a given tree-sitter node."""
         # node.start_byte and node.end_byte are byte offsets into self.source
         return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
@@ -71,23 +71,27 @@ class ASTLayer:
     """Manages tree-sitter parsers and parses source files into ParsedFile objects."""
 
     def __init__(self) -> None:
-        self._parsers: dict[str, "Parser"] = {}
+        self._parsers: dict[str, Parser] = {}
 
-    def _get_parser(self, language: str) -> "Parser":
+    def _get_parser(self, language: str) -> Parser:
         if language not in self._parsers:
             self._parsers[language] = get_parser(language)  # type: ignore[arg-type]
         return self._parsers[language]
 
     def parse_file(self, path: Path) -> ParsedFile | None:
-        """Parse a single file. Returns None if the file extension is unsupported."""
+        """Parse a single file.
+
+        Returns None when the extension isn't supported (a routine "skip"
+        case). Raises OSError on read failure so the caller can distinguish
+        a real problem from an expected skip — the Scanner counts read
+        failures into ``ScanResult.scan_errors`` so downstream SARIF reports
+        ``executionSuccessful: false``.
+        """
         ext = path.suffix.lower()
         language = LANGUAGE_MAP.get(ext)
         if not language:
             return None
-        try:
-            source = path.read_bytes()
-        except (OSError, PermissionError):
-            return None
+        source = path.read_bytes()
         parser = self._get_parser(language)
         tree = parser.parse(source)
         lines = source.decode("utf-8", errors="replace").splitlines()

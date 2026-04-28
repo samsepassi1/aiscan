@@ -114,7 +114,7 @@ def generate_sarif(result: ScanResult) -> dict:
                 "results": sarif_results,
                 "invocations": [
                     {
-                        "executionSuccessful": True,
+                        "executionSuccessful": result.scan_errors == 0,
                         "commandLine": f"aiscan scan {result.target_path}",
                         "startTimeUtc": result.timestamp,
                     }

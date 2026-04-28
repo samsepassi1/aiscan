@@ -57,8 +57,10 @@ class SSRFInServerFetchRule(BaseRule):
             if STATIC_URL_ONLY.search(line):
                 continue
             if not TAINT_PATTERN.search(line):
-                # Check the next 2 lines — multiline call arguments
-                window = " ".join(parsed.lines[i : min(i + 2, len(parsed.lines))])
+                # Check the call line plus the next 2 — multiline call args.
+                # The loop is 1-indexed (enumerate start=1), so lines[i-1] is
+                # the call line and lines[i-1:i+2] is call+2 below.
+                window = " ".join(parsed.lines[i - 1 : min(i + 2, len(parsed.lines))])
                 if not TAINT_PATTERN.search(window):
                     continue
 

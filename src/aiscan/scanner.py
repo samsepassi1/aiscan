@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 import uuid
 import warnings
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 
 from platformdirs import user_cache_dir
@@ -70,6 +70,17 @@ class Scanner:
         """Return only files changed in the current git diff (staged + unstaged)."""
         try:
             import git
+        except ImportError as exc:
+            # Distinguish a packaging problem (gitpython missing despite being
+            # in install_requires) from real git-state failures so the message
+            # points at the actual cause.
+            warnings.warn(
+                f"aiscan: --diff-only requires the 'gitpython' package which "
+                f"failed to import ({exc}); falling back to full scan.",
+                stacklevel=2,
+            )
+            return self._ast_layer.collect_files(target)
+        try:
             repo = git.Repo(target, search_parent_directories=True)
             if repo.working_tree_dir is None:
                 raise RuntimeError("bare repository has no working tree")
@@ -103,7 +114,8 @@ class Scanner:
         """Run a full scan on target (file or directory)."""
         start = time.monotonic()
         scan_id = str(uuid.uuid4())
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
+        scan_errors = 0
 
         # Collect files
         if self.diff_only:
@@ -114,6 +126,18 @@ class Scanner:
         # Apply exclude prefixes
         if self.exclude:
             target_abs = target.resolve()
+            # Warn upfront for any --exclude path that doesn't exist under the
+            # target. A typo otherwise excludes nothing and the user never
+            # finds out. Use the same .resolve() shape as _is_excluded so
+            # symlinks and "../sibling" forms behave consistently.
+            for ex in self.exclude:
+                if not (target_abs / ex).resolve().exists():
+                    warnings.warn(
+                        f"aiscan: --exclude {ex!r} does not exist under "
+                        f"{target}; nothing to exclude.",
+                        stacklevel=2,
+                    )
+
             def _is_excluded(p: Path) -> bool:
                 p_abs = p.resolve()
                 for ex in self.exclude:
@@ -126,17 +150,29 @@ class Scanner:
                 return False
             files = [f for f in files if not _is_excluded(f)]
 
-        # Parse all files
+        # Parse all files. Read errors are counted into scan_errors so
+        # SARIF executionSuccessful reflects an incomplete scan instead of
+        # silently dropping unreadable files.
         parsed_files: list[ParsedFile] = []
         for f in files:
-            parsed = self._ast_layer.parse_file(f)
+            try:
+                parsed = self._ast_layer.parse_file(f)
+            except OSError as exc:
+                scan_errors += 1
+                warnings.warn(
+                    f"aiscan: failed to read {f} ({exc}); skipping file.",
+                    stacklevel=2,
+                )
+                continue
             if parsed:
                 parsed_files.append(parsed)
 
         # AST rule pass
         ast_findings: list[Finding] = []
         for pf in parsed_files:
-            ast_findings.extend(self._rule_engine.run(pf))
+            new_findings, rule_errors = self._rule_engine.run_with_errors(pf)
+            ast_findings.extend(new_findings)
+            scan_errors += rule_errors
 
         # LLM pass (optional) — only on files that AST already flagged
         llm_findings: list[Finding] = []
@@ -157,6 +193,7 @@ class Scanner:
                         )
                     )
                 except Exception as exc:
+                    scan_errors += 1
                     warnings.warn(
                         f"aiscan: LLM analysis failed for {pf.path} ({exc}); skipping file.",
                         stacklevel=2,
@@ -178,4 +215,5 @@ class Scanner:
             llm_enabled=self.llm_enabled,
             llm_provider=self.llm_provider if self.llm_enabled else None,
             llm_model=self.llm_model if self.llm_enabled else None,
+            scan_errors=scan_errors,
         )

@@ -35,7 +35,7 @@ class Blamer:
         self._commit_cache: dict[str, CommitInfo | None] = {}
 
     @classmethod
-    def for_target(cls, target: Path) -> "Blamer":
+    def for_target(cls, target: Path) -> Blamer:
         """Locate the enclosing git repo root, or raise BlameError."""
         target_abs = target.resolve()
         start = target_abs if target_abs.is_dir() else target_abs.parent

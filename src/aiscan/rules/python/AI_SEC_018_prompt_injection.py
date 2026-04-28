@@ -41,10 +41,11 @@ _TAINT = (
     r")"
 )
 
-# A taint-bearing string construction on a single line:
-#   - f"...{taint}..."            (f-string interpolation)
-#   - "..." + taint  /  taint + "..."
-#   - "...".format(taint ...) / "...".format(x=taint)
+# A taint-bearing string construction on a single line. The interpolation
+# regexes use [^'"\n]* so they cannot cross line boundaries — taint inside
+# a multi-line triple-quoted f-string spread across several lines won't
+# match. That's a known limitation; we accept it because the AI-generated
+# prompt-injection patterns this rule targets sit on one line in practice.
 _INTERP_TAINT = re.compile(
     rf"""f['"][^'"\n]*\{{[^}}\n]*{_TAINT}"""
     rf"""|['"][^'"\n]*['"]\s*\+\s*{_TAINT}"""

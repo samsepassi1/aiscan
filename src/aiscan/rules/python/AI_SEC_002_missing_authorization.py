@@ -81,7 +81,10 @@ MUTATION_OPS_PY = re.compile(
     r"\b(?:\.save\(\)|\.delete\(\)|\.commit\(\)|\.update\(|\.insert\(|"
     r"\.create\(|db\.session\.add|db\.session\.commit|"
     r"\.filter_by.*\.delete|\.bulk_create|\.bulk_update|"
-    r"cursor\.execute\b|db\.execute\b|conn\.execute\b|session\.execute\b)",
+    # Only flag DML keywords inside execute() — bare execute() commonly
+    # holds SELECTs and shouldn't boost mutation confidence.
+    r"(?:cursor|db|conn|session)\.execute\s*\(\s*[\"']\s*"
+    r"(?:INSERT|UPDATE|DELETE|REPLACE|MERGE|TRUNCATE|DROP|CREATE|ALTER))",
     re.IGNORECASE,
 )
 

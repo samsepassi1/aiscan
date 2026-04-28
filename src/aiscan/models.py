@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -62,8 +61,12 @@ class ScanResult(BaseModel):
     findings: list[Finding]
     duration_seconds: float
     llm_enabled: bool
-    llm_provider: Optional[str] = None
-    llm_model: Optional[str] = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    # Number of files/rules/LLM calls that errored during the scan. SARIF
+    # surfaces this through invocations[].executionSuccessful so CI consumers
+    # can distinguish a clean run from a partial-failure run.
+    scan_errors: int = 0
 
     @property
     def finding_count(self) -> int:

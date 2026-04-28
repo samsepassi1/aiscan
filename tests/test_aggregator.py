@@ -104,6 +104,18 @@ class TestMergeDeduplication:
         assert len(result) == 1
         assert result[0].detection_method == DetectionMethod.LLM
 
+    def test_three_way_merge_keeps_hybrid(self):
+        """Two AST findings collide first, then an LLM finding lands on the
+        same dedup key. The final detection_method must be HYBRID — the
+        AST→AST collision must not strip the eventual cross-tier signal."""
+        ast_a = _finding(severity=Severity.LOW, detection_method=DetectionMethod.AST)
+        ast_b = _finding(severity=Severity.MEDIUM, detection_method=DetectionMethod.AST)
+        llm = _finding(severity=Severity.HIGH, detection_method=DetectionMethod.LLM)
+        result = merge([ast_a, ast_b], [llm])
+        assert len(result) == 1
+        assert result[0].detection_method == DetectionMethod.HYBRID
+        assert result[0].severity == Severity.HIGH
+
 
 class TestSuppressionByAggregator:
     def test_suppressed_finding_marked(self):

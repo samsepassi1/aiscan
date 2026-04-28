@@ -133,6 +133,25 @@ class TestJSRules:
         ssrf_findings = [fi for fi in findings if fi.rule_id == "AI-SEC-015"]
         assert len(ssrf_findings) == 0
 
+    def test_ssrf_multiline_call_with_taint_below(
+        self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path
+    ):
+        """Regression: the multiline-window slice was off-by-one and missed
+        taint on the line(s) immediately below an HTTP call."""
+        f = tmp_path / "multiline_ssrf.js"
+        f.write_text(
+            "async function proxy(req, res) {\n"
+            "  const r = await axios.post(\n"
+            "    req.body.callback_url,\n"
+            "    { ok: true }\n"
+            "  );\n"
+            "  res.json(r.data);\n"
+            "}\n"
+        )
+        findings = self._scan(rule_engine, ast_layer, f)
+        ssrf = [fi for fi in findings if fi.rule_id == "AI-SEC-015"]
+        assert len(ssrf) >= 1, "multiline SSRF call should still be flagged"
+
     # --- AI-SEC-016: Insecure Cookie Flags -------------------------------------
 
     def test_detects_insecure_cookie(self, rule_engine: RuleEngine, ast_layer: ASTLayer, vulnerable_dir: Path):

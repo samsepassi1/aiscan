@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from io import StringIO
 
 
@@ -45,7 +45,7 @@ def make_sample_result() -> ScanResult:
     return ScanResult(
         scan_id="test-scan-001",
         target_path="src/",
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         total_files_scanned=5,
         findings=findings,
         duration_seconds=1.23,

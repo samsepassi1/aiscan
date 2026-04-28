@@ -117,8 +117,12 @@ class LLMEngine:
             )
         source = "\n".join(parsed.lines[:max_lines])
         ctx_key = ":".join(f"{f.rule_id}@{f.line_start}" for f in (context_findings or []))
+        # Include a hash of the system prompt so that prompt edits between
+        # releases automatically invalidate stale cached responses — without
+        # requiring a manual `v2:` -> `v3:` cache-prefix bump every time.
+        prompt_digest = hashlib.sha256(LLM_SYSTEM_PROMPT.encode()).hexdigest()[:12]
         digest = hashlib.sha256(
-            f"{self.provider}:{self.model}:{source}:{ctx_key}".encode()
+            f"{self.provider}:{self.model}:{prompt_digest}:{source}:{ctx_key}".encode()
         ).hexdigest()
         cache_key = f"v2:{digest}"
 
@@ -159,11 +163,16 @@ class LLMEngine:
                 system=LLM_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_msg}],
             )
-            # Iterate content blocks — first block may be tool_use, thinking, etc.
-            for block in response.content:
-                if getattr(block, "type", None) == "text":
-                    return block.text or ""
-            return ""
+            # Concatenate every text block so that extended-thinking responses
+            # (which can interleave thinking and text blocks) and any model
+            # that emits multiple text segments are handled. _parse_response
+            # is tolerant of preamble around the JSON array.
+            texts = [
+                block.text
+                for block in response.content
+                if getattr(block, "type", None) == "text" and getattr(block, "text", None)
+            ]
+            return "\n".join(texts)
 
         # OpenAI (not Ollama): safe to request JSON mode.
         extra_kwargs: dict[str, Any] = {}
