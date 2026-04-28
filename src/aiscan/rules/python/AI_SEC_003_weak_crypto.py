@@ -1,6 +1,6 @@
 """AI-SEC-003: Weak Cryptographic Algorithm Detection.
 
-AI-generated code frequently reaches for MD5/SHA1/DES/RC4 because they appear
+AI-generated code frequently reaches for MD5/SHA1/DES/RC4 because they appear  # aiscan: suppress rule-pattern self-match
 prominently in Stack Overflow answers and older documentation that LLMs have memorized.
 """
 
@@ -26,12 +26,12 @@ class WeakCryptoRule(BaseRule):
         (
             re.compile(r"\bhashlib\.md5\s*\("),
             "MD5 is cryptographically broken. Do not use for security-sensitive hashing.",
-            "Replace hashlib.md5() with hashlib.sha256() or hashlib.sha3_256().",
+            "Replace hashlib.md5() with hashlib.sha256() or hashlib.sha3_256().",  # aiscan: suppress rule-pattern self-match
         ),
         (
             re.compile(r"\bhashlib\.sha1\s*\("),
             "SHA-1 is deprecated for security use (SHAttered collision attack demonstrated).",
-            "Replace hashlib.sha1() with hashlib.sha256() or hashlib.sha3_256().",
+            "Replace hashlib.sha1() with hashlib.sha256() or hashlib.sha3_256().",  # aiscan: suppress rule-pattern self-match
         ),
         (
             re.compile(r"\bCrypto\.Cipher\.DES\b"),
@@ -40,12 +40,12 @@ class WeakCryptoRule(BaseRule):
         ),
         (
             re.compile(r"\bARC4\b|\bRC4\b"),
-            "RC4 is a broken stream cipher with well-documented statistical biases.",
+            "RC4 is a broken stream cipher with well-documented statistical biases.",  # aiscan: suppress rule-pattern self-match
             "Use AES-256-GCM (authenticated encryption) instead.",
         ),
         (
             re.compile(r"\bBlowfish\b"),
-            "Blowfish has a 64-bit block size, making it vulnerable to SWEET32 birthday attacks.",
+            "Blowfish has a 64-bit block size, making it vulnerable to SWEET32 birthday attacks.",  # aiscan: suppress rule-pattern self-match
             "Use AES-256-GCM instead.",
         ),
         (

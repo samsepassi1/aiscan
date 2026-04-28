@@ -20,10 +20,10 @@ The `aiscan` name on PyPI is taken by an unrelated project, so install
 from this repository directly:
 
 ```bash
-pip install git+https://github.com/samsepassi1/aiscan@v0.2.1
+pip install git+https://github.com/samsepassi1/aiscan@v0.2.2
 ```
 
-Or pin a specific commit / branch by replacing `@v0.2.1`. Local
+Or pin a specific commit / branch by replacing `@v0.2.2`. Local
 development install:
 
 ```bash
@@ -98,6 +98,21 @@ Suppression is **language-aware**: `#` is recognized only in Python, and
 `//` in a Python file is integer division, not a comment, and will not
 suppress anything — and the same applies to `#` in a JS/TS file.
 
+## Path-level Exclusion
+
+Drop a `.aiscanignore` file at the scan target root to exclude paths
+declaratively (the same prefix semantics as `--exclude`, one entry per
+line). Lines starting with `#` are comments.
+
+```
+# .aiscanignore
+tests/fixtures
+vendor
+generated
+```
+
+Entries from `.aiscanignore` and any `--exclude` flags are merged.
+
 ## Metrics — AI vs. human defect rates
 
 `aiscan metrics` runs a scan, uses `git blame` to map each finding to the
@@ -158,7 +173,7 @@ Once your team adopts that, `aiscan metrics` becomes a real trend line
 of human vs. AI defect rates over time.
 
 Heuristic detection without explicit markers (commit-message linguistic
-patterns, PR-author analysis, etc.) is on the roadmap but not in v0.2.1
+patterns, PR-author analysis, etc.) is on the roadmap but not in v0.2.2
 — that approach trades higher coverage for higher false-positive rates,
 so the v1 implementation prefers the high-precision marker-based path.
 
@@ -207,7 +222,7 @@ aiscan rules
 ## GitHub Actions
 
 ```yaml
-- uses: samsepassi1/aiscan@v0.2.1
+- uses: samsepassi1/aiscan@v0.2.2
   with:
     target: "src/"
     severity: "HIGH"
@@ -219,7 +234,7 @@ level — the action reads `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from
 the workflow environment, so the secret must be wired explicitly:
 
 ```yaml
-- uses: samsepassi1/aiscan@v0.2.1
+- uses: samsepassi1/aiscan@v0.2.2
   with:
     target: "src/"
     severity: "HIGH"

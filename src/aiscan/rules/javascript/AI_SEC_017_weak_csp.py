@@ -6,7 +6,7 @@ when an XSS slips through. The common failure modes are:
   * ``'unsafe-inline'`` in script-src — allows any inline <script>, which
     is exactly what an XSS payload injects. Effectively disables CSP's XSS
     protection.
-  * ``'unsafe-eval'`` — allows eval() and new Function().
+  * ``'unsafe-eval'`` — allows eval() and new Function().  # aiscan: suppress rule-pattern self-match
   * Wildcard ``*`` source in script-src/default-src — trivially bypassable.
 
 SSR frameworks like Electrode make strict CSP harder (the inline state
@@ -140,7 +140,7 @@ class WeakCSPRule(BaseRule):
                             "  html += `<script nonce=\"${nonce}\">window.__INITIAL_STATE__ "
                             "= ...</script>`;\n"
                             "Remove 'unsafe-eval' entirely — it exists to support "
-                            "eval() and new Function(), which should not be in "
+                            "eval() and new Function(), which should not be in "  # aiscan: suppress rule-pattern self-match
                             "production code."
                         ),
                         code_snippet=line.rstrip(),

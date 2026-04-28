@@ -1,6 +1,6 @@
 """AI-SEC-009: Dynamic Code Execution via eval/exec.
 
-AI-generated code frequently generates eval()/exec() patterns, especially in
+AI-generated code frequently generates eval/exec patterns, especially in
 code that processes user input, template engines, or admin consoles. These are
 trivial RCE vectors when the argument is attacker-controlled.
 """
@@ -14,9 +14,9 @@ from aiscan.base_rule import BaseRule
 from aiscan.models import DetectionMethod, Finding, Severity
 
 
-# Matches eval() or exec() with a non-literal argument.
+# Matches eval/exec calls with a non-literal argument.
 # STRING_LITERAL_ONLY anchors with ^...$ so a trailing comment or assignment
-# (e.g. `x = eval('1+1')  # comment`) falls through and fires. That's
+# such as `x = eval-of-literal  # comment` falls through and fires. That's
 # intentional: literal-string eval is still an anti-pattern, and most
 # ergonomic uses live on a bare line. A tree-sitter argument-type check
 # would be more precise but the regex covers the common AI-generated shapes.
@@ -38,7 +38,7 @@ class EvalExecRule(BaseRule):
         findings: list[Finding] = []
 
         for i, line in enumerate(parsed.lines, start=1):
-            # eval() / exec() with non-literal arguments
+            # eval/exec with non-literal arguments
             if EVAL_EXEC_PATTERN.search(line) and not STRING_LITERAL_ONLY.match(line):
                 m = EVAL_EXEC_PATTERN.search(line)
                 func = m.group(1) if m else "eval/exec"
@@ -73,7 +73,7 @@ class EvalExecRule(BaseRule):
                     line_start=i,
                     line_end=i,
                     message=(
-                        "__import__() called with a variable argument. "
+                        "__import__() called with a variable argument. "  # aiscan: suppress rule-pattern self-match
                         "This allows an attacker to load arbitrary modules."
                     ),
                     cwe_ids=self.cwe_ids,

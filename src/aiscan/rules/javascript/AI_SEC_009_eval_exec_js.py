@@ -34,7 +34,7 @@ class JSEvalExecRule(BaseRule):
                     line_start=i,
                     line_end=i,
                     message=(
-                        "eval() with a non-literal argument. In JavaScript, eval() executes "
+                        "eval() with a non-literal argument. In JavaScript, eval() executes "  # aiscan: suppress rule-pattern self-match
                         "arbitrary code in the current scope. If the argument is user-controlled, "
                         "this is an XSS / RCE vulnerability."
                     ),
@@ -42,7 +42,7 @@ class JSEvalExecRule(BaseRule):
                     detection_method=self.detection_method,
                     confidence=0.88,
                     remediation=(
-                        "Remove eval(). Use JSON.parse() for data, or restructure logic to "
+                        "Remove eval(). Use JSON.parse() for data, or restructure logic to "  # aiscan: suppress rule-pattern self-match
                         "avoid dynamic code execution."
                     ),
                     code_snippet=line.rstrip(),
@@ -56,7 +56,7 @@ class JSEvalExecRule(BaseRule):
                     line_start=i,
                     line_end=i,
                     message=(
-                        "new Function() constructs a function from a string, equivalent to eval(). "
+                        "new Function() constructs a function from a string, equivalent to eval(). "  # aiscan: suppress rule-pattern self-match
                         "Treat this as a code injection risk."
                     ),
                     cwe_ids=self.cwe_ids,

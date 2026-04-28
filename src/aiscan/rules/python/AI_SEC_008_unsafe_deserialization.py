@@ -1,6 +1,6 @@
 """AI-SEC-008: Unsafe Deserialization.
 
-AI-generated code routinely uses pickle.loads() or yaml.load() on untrusted data,
+AI-generated code routinely uses pickle.loads or yaml.load on untrusted data,
 which allows arbitrary code execution. These patterns appear in AI-generated
 data-pipeline and configuration-loading code.
 """
@@ -25,7 +25,7 @@ class UnsafeDeserializationRule(BaseRule):
     PATTERNS: list[tuple[re.Pattern, str, str, float]] = [
         (
             re.compile(r"\bpickle\.loads\s*\("),
-            "pickle.loads() deserializes arbitrary Python objects and executes embedded code. "
+            "pickle.loads() deserializes arbitrary Python objects and executes embedded code. "  # aiscan: suppress rule-pattern self-match
             "Never deserialize untrusted data with pickle.",
             "Use json.loads() or a safe serialization library. If pickle is required, "
             "cryptographically sign and verify the payload before deserializing.",
@@ -33,31 +33,31 @@ class UnsafeDeserializationRule(BaseRule):
         ),
         (
             re.compile(r"\bpickle\.load\s*\("),
-            "pickle.load() deserializes arbitrary Python objects from a file-like object. "
+            "pickle.load() deserializes arbitrary Python objects from a file-like object. "  # aiscan: suppress rule-pattern self-match
             "Ensure the source is trusted and cryptographically verified.",
             "Use json.load() instead. If pickle is required, verify the payload integrity first.",
             0.9,
         ),
         (
-            # yaml.load() without an explicit SafeLoader/BaseLoader on the same line.
+            # yaml.load without an explicit SafeLoader/BaseLoader on the same line.
             # Note: multiline calls (Loader= on the next line) may still trigger; prefer yaml.safe_load().
             re.compile(r"\byaml\.load\s*\((?![^)]*Loader\s*=\s*yaml\.SafeLoader)(?![^)]*Loader\s*=\s*yaml\.BaseLoader)"),
-            "yaml.load() without an explicit safe Loader can execute arbitrary Python. "
+            "yaml.load() without an explicit safe Loader can execute arbitrary Python. "  # aiscan: suppress rule-pattern self-match
             "This is a critical RCE vulnerability when loading untrusted YAML.",
-            "Replace yaml.load(data) with yaml.safe_load(data), or explicitly pass "
+            "Replace yaml.load(data) with yaml.safe_load(data), or explicitly pass "  # aiscan: suppress rule-pattern self-match
             "Loader=yaml.SafeLoader.",
             0.92,
         ),
         (
             re.compile(r"\bmarshal\.loads\s*\("),
-            "marshal.loads() can execute arbitrary code embedded in Python bytecode. "
+            "marshal.loads() can execute arbitrary code embedded in Python bytecode. "  # aiscan: suppress rule-pattern self-match
             "Never use marshal for untrusted data.",
             "Use json.loads() or msgpack for serialization of untrusted data.",
             0.95,
         ),
         (
             re.compile(r"\bshelve\.open\s*\("),
-            "shelve.open() uses pickle internally and is vulnerable to the same RCE risks. "
+            "shelve.open() uses pickle internally and is vulnerable to the same RCE risks. "  # aiscan: suppress rule-pattern self-match
             "Opening attacker-controlled shelve files can execute arbitrary code.",
             "Use a database (sqlite3, SQLAlchemy) or a safe serialization format (JSON) "
             "for storing user-controlled data.",

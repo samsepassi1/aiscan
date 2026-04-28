@@ -15,7 +15,7 @@ from aiscan.scanner import Scanner
 from aiscan.models import ScanResult
 
 
-_SECRET_LINE = "password = 'aBcDeFgHiJkLmNoPqRsTuVwXyZ123456'\n"
+_SECRET_LINE = "password = 'aBcDeFgHiJkLmNoPqRsTuVwXyZ123456'\n"  # aiscan: suppress test fixture string
 
 
 def _git(cwd: Path, *args: str) -> None:
@@ -111,6 +111,20 @@ class TestScannerIntegration:
             and "does_not_exist" in str(warning.message)
             for warning in w
         ), [str(x.message) for x in w]
+
+    def test_aiscanignore_excludes_paths(self, tmp_path: Path):
+        """A .aiscanignore file at the scan target excludes its listed paths."""
+        (tmp_path / "app.py").write_text("password = 'aBcDeFgHiJkLmNoPqRsTu123456'\n")
+        skipped = tmp_path / "vendor"
+        skipped.mkdir()
+        (skipped / "noisy.py").write_text("password = 'aBcDeFgHiJkLmNoPqRsTu123456'\n")
+        (tmp_path / ".aiscanignore").write_text("# comment line\n\nvendor\n")
+
+        scanner = Scanner(llm_enabled=False)
+        result = scanner.scan(tmp_path)
+        scanned = {f.file_path for f in result.findings}
+        assert not any("vendor" in p for p in scanned), scanned
+        assert any("app.py" in p for p in scanned), scanned
 
     def test_rule_failure_bumps_scan_errors_and_sarif_unsuccessful(
         self, tmp_path: Path

@@ -59,7 +59,7 @@ class TestJSRules:
 
     def test_eval_literal_string_no_finding(self, rule_engine: RuleEngine, ast_layer: ASTLayer, tmp_path: Path):
         f = tmp_path / "safe.js"
-        f.write_text("const x = eval('1 + 1');\n")
+        f.write_text("const x = eval('1 + 1');\n")  # aiscan: suppress test fixture string
         findings = self._scan(rule_engine, ast_layer, f)
         eval_findings = [fi for fi in findings if fi.rule_id == "AI-SEC-009"]
         assert len(eval_findings) == 0

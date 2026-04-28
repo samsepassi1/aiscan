@@ -123,24 +123,48 @@ class Scanner:
         else:
             files = self._ast_layer.collect_files(target)
 
+        # Merge --exclude with any patterns declared in <target>/.aiscanignore.
+        # The ignore file is opt-in (only honored when target is a directory)
+        # and uses simple path-prefix semantics — same as --exclude — not
+        # gitignore globs. Lines starting with # and blank lines are skipped.
+        effective_exclude: tuple[str, ...] = self.exclude
+        if target.is_dir():
+            ignore_file = target / ".aiscanignore"
+            if ignore_file.is_file():
+                try:
+                    raw = ignore_file.read_text(encoding="utf-8")
+                except OSError as exc:
+                    warnings.warn(
+                        f"aiscan: failed to read {ignore_file} ({exc}); ignoring file.",
+                        stacklevel=2,
+                    )
+                else:
+                    extra = tuple(
+                        line.strip()
+                        for line in raw.splitlines()
+                        if line.strip() and not line.lstrip().startswith("#")
+                    )
+                    effective_exclude = effective_exclude + extra
+
         # Apply exclude prefixes
-        if self.exclude:
+        if effective_exclude:
             target_abs = target.resolve()
             # Warn upfront for any --exclude path that doesn't exist under the
             # target. A typo otherwise excludes nothing and the user never
             # finds out. Use the same .resolve() shape as _is_excluded so
             # symlinks and "../sibling" forms behave consistently.
-            for ex in self.exclude:
+            # .aiscanignore entries get the same warning treatment.
+            for ex in effective_exclude:
                 if not (target_abs / ex).resolve().exists():
                     warnings.warn(
-                        f"aiscan: --exclude {ex!r} does not exist under "
+                        f"aiscan: exclude path {ex!r} does not exist under "
                         f"{target}; nothing to exclude.",
                         stacklevel=2,
                     )
 
             def _is_excluded(p: Path) -> bool:
                 p_abs = p.resolve()
-                for ex in self.exclude:
+                for ex in effective_exclude:
                     ex_abs = (target_abs / ex).resolve()
                     try:
                         p_abs.relative_to(ex_abs)

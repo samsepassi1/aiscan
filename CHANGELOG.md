@@ -6,6 +6,32 @@ All notable changes to aiscan are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-04-28
+
+### Added
+- `.aiscanignore` support. Drop a `.aiscanignore` file at the scan
+  target root to exclude paths declaratively (one entry per line, `#`
+  comments allowed). Entries are merged with any `--exclude` flags and
+  use the same path-prefix semantics.
+
+### Fixed
+- Self-scan no longer reports rule definitions as vulnerabilities.
+  Rule files contain literal pattern strings (`pickle.loads()`,
+  `eval()`, `RC4`, `Blowfish`, etc.) that were being matched against
+  themselves. Annotated those lines with `# aiscan: suppress
+  rule-pattern self-match` so they remain transparent rather than
+  silently filtered.
+- `AI-SEC-011` (path traversal) no longer fires on its own
+  documentation. A comment example assigning `var = sanitize(req.body)`
+  tainted the variable name `var`, causing a downstream comment that
+  illustrated `open('path/' + var)` to be flagged. Renamed the example
+  variable.
+- `tests/fixtures/safe/prompt_injection_safe.js` no longer trips
+  `AI-SEC-002` (missing authorization). The fixture demonstrates safe
+  LLM-call patterns; it now also guards the `/chat` route with a
+  `requireAuth` middleware so it is safe across all rules, not only
+  the prompt-injection rule it was named for.
+
 ## [0.2.1] — 2026-04-27
 
 ### Changed

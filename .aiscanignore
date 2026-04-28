@@ -1,0 +1,8 @@
+# Paths excluded from `aiscan scan .` on this repo.
+# Same prefix semantics as --exclude: each non-comment line is a path
+# (relative to the scan target) whose subtree is skipped.
+
+# Test fixtures are intentionally vulnerable inputs used to assert that
+# rules fire correctly. They are not application code and must not be
+# scored as findings against this project.
+tests/fixtures

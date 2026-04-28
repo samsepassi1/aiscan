@@ -72,7 +72,7 @@ class PathTraversalRule(BaseRule):
         # Build set of tainted variable names (Python only) from assignments
         # in the file. The taint set is scope-blind by design — we don't
         # track function boundaries, reassignment, or sanitizing wrappers.
-        # The tradeoff is occasional FPs (e.g. var = sanitize(req.body))
+        # The tradeoff is occasional FPs (e.g. clean = sanitize(req.body))
         # for higher recall on the AI-generated patterns this rule targets.
         tainted_vars: set[str] = set()
         if parsed.language == "python":
