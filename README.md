@@ -253,7 +253,7 @@ one entry in `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/samsepassi1/aiscan
-    rev: v0.2.1   # or any tagged release
+    rev: v0.2.3   # or any tagged release
     hooks:
       - id: aiscan
 ```
