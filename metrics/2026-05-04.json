@@ -1,0 +1,44 @@
+{
+  "scan_id": "d7f647b0-c4c3-4797-ad01-ffe3befb82fb",
+  "target_path": ".",
+  "timestamp": "2026-05-04T08:33:01.568373+00:00",
+  "total_findings": 0,
+  "buckets": {
+    "ai": {
+      "count": 0,
+      "by_severity": {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0,
+        "INFO": 0
+      },
+      "by_rule": {}
+    },
+    "human": {
+      "count": 0,
+      "by_severity": {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0,
+        "INFO": 0
+      },
+      "by_rule": {}
+    },
+    "unknown": {
+      "count": 0,
+      "by_severity": {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0,
+        "INFO": 0
+      },
+      "by_rule": {}
+    }
+  },
+  "annotated": [],
+  "scan_duration_seconds": 1.1014768679999634,
+  "blame_duration_seconds": 8.619999789516442e-7
+}
